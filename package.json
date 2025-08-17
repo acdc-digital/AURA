@@ -1,0 +1,21 @@
+{
+  "name": "aura-workspace",
+  "version": "1.0.0",
+  "description": "AURA project monorepo workspace",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --recursive run dev",
+    "build": "pnpm --recursive run build",
+    "install:all": "pnpm install",
+    "clean": "pnpm --parallel --recursive run clean",
+    "lint": "pnpm --parallel --recursive run lint",
+    "test": "pnpm --parallel --recursive run test"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "prettier": "^3.0.0",
+    "eslint": "^8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}

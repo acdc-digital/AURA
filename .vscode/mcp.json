@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "convex-aura": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "convex@latest", "mcp", "start"],
+      "cwd": "/Users/matthewsimon/Projects/AURA/AURA",
+      "env": {
+        "CONVEX_DEPLOYMENT": "dev:exuberant-starfish-100"
+      }
+    }
+  }
+}
