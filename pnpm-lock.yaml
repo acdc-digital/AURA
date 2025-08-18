@@ -62,6 +62,9 @@ importers:
       tailwind-merge:
         specifier: ^3.3.1
         version: 3.3.1
+      tailwind-rounded-out:
+        specifier: ^2.0.0
+        version: 2.0.0
       zustand:
         specifier: ^5.0.7
         version: 5.0.7(@types/react@19.1.10)(react@19.1.1)
@@ -4293,6 +4296,10 @@ packages:
 
   /tailwind-merge@3.3.1:
     resolution: {integrity: sha512-gBXpgUm/3rp1lMZZrM/w7D8GKqshif0zAymAhbCyIt8KMe+0v9DQ7cdYLR4FHH/cKpdTXb+A/tKKU3eolfsI+g==}
+    dev: false
+
+  /tailwind-rounded-out@2.0.0:
+    resolution: {integrity: sha512-QPZGy7zvE/qbN81e9MrLZhd+CPTHlHcrKAp0TKrJFb/yfcpwD7mY8bCwD8aCBMtEPtexKSVAKfQsMrk1cNkPEA==}
     dev: false
 
   /tailwindcss@4.1.12:

@@ -1,21 +1,21 @@
-// EDITOR COMPONENT - Main editor panel with tabs and navigation for AURA
-// /Users/matthewsimon/Projects/AURA/AURA/app/_components/editor/DashEditor.tsx
+// NAVIGATOR COMPONENT - Main editor panel with tabs and navigation for AURA
+// /Users/matthewsimon/Projects/AURA/AURA/app/_components/editor/Navigator.tsx
 
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/lib/store";
 import { useConvexAuth } from "convex/react";
-import { ChevronLeft, ChevronRight, Plus, X, FileCode, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, FileCode, FileText, Settings, CreditCard, User } from "lucide-react";
+import { UserProfile } from "@/app/_components/activity/_components/userProfle/UserProfile";
 
-export function DashEditor() {
+export function Navigator() {
   const { 
     tabs,
     activeTabId,
     openTab,
     closeTab,
-    setActiveTab,
-    markTabDirty
+    setActiveTab
   } = useEditorStore();
 
   const { isAuthenticated } = useConvexAuth();
@@ -78,6 +78,12 @@ export function DashEditor() {
         return FileCode;
       case 'welcome':
         return FileText;
+      case 'settings':
+        return Settings;
+      case 'subscription':
+        return CreditCard;
+      case 'user-profile':
+        return User;
       default:
         return FileCode;
     }
@@ -88,7 +94,7 @@ export function DashEditor() {
   return (
     <div className="flex-1 flex flex-col bg-[#1a1a1a] h-full">
       {/* Tab Bar */}
-      <div className="h-[35px] bg-[#181818] border-b border-l border-r border-[#2d2d2d] relative flex-shrink-0">
+      <div className="h-[35px] bg-[#181818] border-b border-r border-[#2d2d2d] relative flex-shrink-0">
         {/* Tab Container - Full width with space for buttons */}
         <div ref={containerRef} className="absolute left-8 right-16 top-0 bottom-0 overflow-hidden bg-[#1e1e1e]">
           <div 
@@ -188,19 +194,46 @@ export function DashEditor() {
         </div>
       </div>
 
-      {/* Editor Content */}
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 flex items-center justify-center bg-[#1e1e1e]">
-          {currentTab ? (
-            <div className="text-center space-y-4">
-              <h2 className="text-xl font-semibold text-[#cccccc]">
-                {currentTab.title}
-              </h2>
-              <p className="text-[#858585]">
-                {currentTab.type === 'welcome' ? 'Welcome to AURA!' : 'Edit your file here'}
-              </p>
-            </div>
-          ) : (
+      {/* Editor Content - Scrollable */}
+      <div className="flex-1 overflow-auto bg-[#1e1e1e]">
+        {currentTab ? (
+          <>
+            {currentTab.type === 'user-profile' && <UserProfile />}
+            {currentTab.type === 'subscription' && (
+              <div className="p-8 text-center">
+                <h2 className="text-xl font-semibold text-[#cccccc] mb-4">
+                  Subscription Plans
+                </h2>
+                <p className="text-[#858585]">
+                  Manage your subscription and billing preferences.
+                </p>
+              </div>
+            )}
+            {currentTab.type === 'settings' && (
+              <div className="p-8 text-center">
+                <h2 className="text-xl font-semibold text-[#cccccc] mb-4">
+                  Settings
+                </h2>
+                <p className="text-[#858585]">
+                  Configure your AURA preferences and editor settings.
+                </p>
+              </div>
+            )}
+            {(currentTab.type === 'file' || currentTab.type === 'welcome') && (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center space-y-4">
+                  <h2 className="text-xl font-semibold text-[#cccccc]">
+                    {currentTab.title}
+                  </h2>
+                  <p className="text-[#858585]">
+                    {currentTab.type === 'welcome' ? 'Welcome to AURA!' : 'Edit your file here'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-4">
               <h1 className="text-3xl font-bold text-[#cccccc]">
                 {isAuthenticated ? 'Welcome to AURA!' : 'Please sign in'}
@@ -217,8 +250,8 @@ export function DashEditor() {
                 </button>
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

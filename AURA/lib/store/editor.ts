@@ -7,7 +7,7 @@ import { persist } from "zustand/middleware";
 interface Tab {
   id: string;
   title: string;
-  type: 'file' | 'welcome' | 'settings';
+  type: 'file' | 'welcome' | 'settings' | 'subscription' | 'user-profile';
   filePath?: string;
   isDirty: boolean;
   isPinned: boolean;
@@ -32,8 +32,12 @@ interface EditorState {
   // Layout
   editorWidth: number;
   
+  // User profile tab state
+  userProfileView: 'profile' | 'settings';
+  
   // Actions
   openTab: (tab: Omit<Tab, 'isDirty' | 'isPinned'>) => void;
+  openSpecialTab: (id: string, title: string, type: Tab['type']) => void;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;
   updateTabTitle: (tabId: string, title: string) => void;
@@ -41,6 +45,7 @@ interface EditorState {
   pinTab: (tabId: string) => void;
   updateSettings: (settings: Partial<EditorSettings>) => void;
   setEditorWidth: (width: number) => void;
+  setUserProfileView: (view: 'profile' | 'settings') => void;
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -57,6 +62,7 @@ export const useEditorStore = create<EditorState>()(
         minimap: false,
       },
       editorWidth: 800,
+      userProfileView: 'profile',
       
       // Actions
       openTab: (tab) => set((state) => {
@@ -72,6 +78,24 @@ export const useEditorStore = create<EditorState>()(
         return {
           tabs: [...state.tabs, newTab],
           activeTabId: tab.id,
+        };
+      }),
+      
+      openSpecialTab: (id, title, type) => set((state) => {
+        const exists = state.tabs.find(t => t.id === id);
+        if (exists) {
+          return { activeTabId: id };
+        }
+        const newTab: Tab = {
+          id,
+          title,
+          type,
+          isDirty: false,
+          isPinned: false,
+        };
+        return {
+          tabs: [...state.tabs, newTab],
+          activeTabId: id,
         };
       }),
       
@@ -108,6 +132,8 @@ export const useEditorStore = create<EditorState>()(
       })),
       
       setEditorWidth: (width) => set({ editorWidth: width }),
+      
+      setUserProfileView: (view) => set({ userProfileView: view }),
     }),
     {
       name: 'aura-editor-storage',

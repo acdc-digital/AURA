@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useConvexAuth } from "convex/react";
 import { PanelType } from "@/lib/store";
 import { LucideIcon } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 import {
     Bot,
     Bug,
@@ -26,6 +27,7 @@ interface ActivityBarProps {
 
 export function DashActivityBar({ activePanel, onPanelChange }: ActivityBarProps) {
   const { isAuthenticated } = useConvexAuth();
+  const { user } = useUser();
 
   const activityItems: Array<{ id: PanelType; icon: LucideIcon; label: string }> = [
     { id: "explorer", icon: FileText, label: "Explorer" },
@@ -47,7 +49,16 @@ export function DashActivityBar({ activePanel, onPanelChange }: ActivityBarProps
   };
 
   const getUserInitial = () => {
-    return 'U'; // Default user initial
+    if (user?.firstName) {
+      return user.firstName.charAt(0).toUpperCase();
+    }
+    if (user?.fullName) {
+      return user.fullName.charAt(0).toUpperCase();
+    }
+    if (user?.emailAddresses?.[0]?.emailAddress) {
+      return user.emailAddresses[0].emailAddress.charAt(0).toUpperCase();
+    }
+    return 'U';
   };
 
   return (

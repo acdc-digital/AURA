@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "cd AURA && pnpm dev",
     "convex": "cd AURA && pnpm convex",
-    "audit": "cd AURA && pnpm audit",
+    "state": "cd AURA && pnpm state",
     "build": "pnpm --recursive run build",
     "install:all": "pnpm install",
     "clean": "pnpm --parallel --recursive run clean",

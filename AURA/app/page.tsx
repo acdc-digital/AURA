@@ -4,11 +4,11 @@
 "use client";
 
 import { Copyright, AlertCircle } from "lucide-react";
-import { DashActivityBar } from "./_components/dashboard/dashActivityBar";
-import { DashEditor } from "./_components/editor/DashEditor";
-import { DashSidebar } from "./_components/dashboard/dashSidebar";
+import { DashActivityBar } from "./_components/activity/dashActivityBar";
+import { Navigator } from "./_components/editor/Navigator";
+import { DashSidebar } from "./_components/sidebar/dashSidebar";
 import { Terminal } from "./_components/terminal";
-import { AuthWrapper } from "@/components/auth/AuthWrapper";
+import { AuthWrapper } from "@/app/_components/auth/AuthWrapper";
 import { ResizablePanelGroup, ResizablePanel /*, ResizableHandle */ } from "@/components/ui/resizable";
 import { useSidebarStore } from "@/lib/store";
 
@@ -45,7 +45,7 @@ export default function HomePage() {
             <ResizablePanelGroup direction="vertical" className="flex-1">
               {/* Editor Panel */}
               <ResizablePanel defaultSize={70} minSize={30}>
-                <DashEditor />
+                <Navigator />
               </ResizablePanel>
               
               {/* <ResizableHandle withHandle /> */}

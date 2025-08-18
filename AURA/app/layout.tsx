@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { ClerkProvider } from "@clerk/nextjs";
+import { AuthSync } from "./_components/auth/AuthSync";
 
 export const metadata: Metadata = {
   title: "AURA - AI Development Environment",
@@ -21,6 +22,7 @@ export default function RootLayout({
       <body className="dark">
         <ClerkProvider dynamic>
           <ConvexClientProvider>
+            <AuthSync />
             <div className="flex-1">
               {children}
             </div>

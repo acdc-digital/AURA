@@ -162,13 +162,16 @@ export default defineSchema({
     username: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
 
-    // Legacy fields (keep for backward compatibility)
-    name: v.optional(v.string()),
+    // Core user fields
+    name: v.optional(v.string()), // Computed from firstName + lastName
     role: v.optional(v.string()),
+    
+    // Legacy fields (for backward compatibility - can be removed later)
     isAnonymous: v.optional(v.boolean()),
-    authId: v.optional(v.string()),
-    image: v.optional(v.string()),
+    image: v.optional(v.string()), // Use imageUrl instead
     emailVerificationTime: v.optional(v.number()),
+    
+    // Timestamps
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
   }).index("by_email", ["email"])

@@ -3,15 +3,16 @@
 
 "use client";
 
-import { useUser, SignInButton, UserButton } from "@clerk/nextjs";
+import { useUser, SignInButton } from "@clerk/nextjs";
 import { PanelType } from "@/lib/store";
+import { UserConsole } from "@/app/_components/activity/_components";
 
 interface DashSidebarProps {
   activePanel: PanelType;
 }
 
 export function DashSidebar({ activePanel }: DashSidebarProps) {
-  const { isSignedIn, user } = useUser();
+  const { isSignedIn } = useUser();
 
   const renderPanelContent = () => {
     switch (activePanel) {
@@ -106,62 +107,7 @@ export function DashSidebar({ activePanel }: DashSidebarProps) {
         );
       
       case 'account':
-        return (
-          <div className="p-4">
-            <h3 className="text-[#cccccc] font-medium mb-4">ACCOUNT</h3>
-            {isSignedIn ? (
-              <div className="space-y-4">
-                {/* User Info */}
-                <div className="flex items-center space-x-3 p-3 bg-[#2d2d2d] rounded">
-                  <UserButton 
-                    appearance={{
-                      elements: {
-                        avatarBox: "w-10 h-10",
-                      },
-                      variables: {
-                        colorPrimary: "#007acc",
-                      }
-                    }}
-                  />
-                  <div>
-                    <div className="text-[#cccccc] text-sm font-medium">
-                      {user?.firstName} {user?.lastName}
-                    </div>
-                    <div className="text-[#858585] text-xs">
-                      {user?.emailAddresses[0]?.emailAddress}
-                    </div>
-                    <div className="text-[#007acc] text-xs mt-1">
-                      Authenticated
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Quick Actions */}
-                <div className="space-y-2">
-                  <div className="text-[#cccccc] text-xs font-medium mb-2">Quick Actions</div>
-                  <button className="w-full text-left px-3 py-2 text-xs bg-[#2d2d2d] text-[#cccccc] rounded hover:bg-[#3e3e3e] transition-colors">
-                    Account Settings
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-xs bg-[#2d2d2d] text-[#cccccc] rounded hover:bg-[#3e3e3e] transition-colors">
-                    Preferences
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-[#858585] text-sm">
-                <p className="mb-4">Sign in to access your AURA account and manage your profile.</p>
-                <SignInButton mode="modal">
-                  <button className="w-full bg-[#007acc] hover:bg-[#005a9e] text-white px-3 py-2 rounded text-xs transition-colors">
-                    Sign In to AURA
-                  </button>
-                </SignInButton>
-                <p className="text-xs mt-3 text-[#6a6a6a]">
-                  New to AURA? Signing in will create your account automatically.
-                </p>
-              </div>
-            )}
-          </div>
-        );
+        return <UserConsole />;
       
       default:
         return (
