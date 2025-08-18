@@ -4,7 +4,9 @@
   "description": "AURA project monorepo workspace",
   "private": true,
   "scripts": {
-    "dev": "pnpm --parallel --recursive run dev",
+    "dev": "cd AURA && pnpm dev",
+    "convex": "cd AURA && pnpm convex",
+    "audit": "cd AURA && pnpm audit",
     "build": "pnpm --recursive run build",
     "install:all": "pnpm install",
     "clean": "pnpm --parallel --recursive run clean",

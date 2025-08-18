@@ -3,6 +3,7 @@ applyTo: "**/*.ts,**/*.tsx,**/*.js,**/*.jsx"
 ---
 
 # Convex guidelines
+
 ## Function guidelines
 ### New function syntax
 - ALWAYS use the new function syntax for Convex functions. For example:

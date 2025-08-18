@@ -1,166 +1,84 @@
+// VS Code-Inspired AURA Dashboard - Homepage
+// /Users/matthewsimon/Projects/AURA/AURA/app/page.tsx
+
 "use client";
 
-import {
-  Authenticated,
-  Unauthenticated,
-  useMutation,
-  useQuery,
-} from "convex/react";
-import { api } from "../convex/_generated/api";
-import Link from "next/link";
-import { SignUpButton } from "@clerk/nextjs";
-import { SignInButton } from "@clerk/nextjs";
-import { UserButton } from "@clerk/nextjs";
+import { Copyright, AlertCircle } from "lucide-react";
+import { DashActivityBar } from "./_components/dashboard/dashActivityBar";
+import { DashEditor } from "./_components/editor/DashEditor";
+import { DashSidebar } from "./_components/dashboard/dashSidebar";
+import { Terminal } from "./_components/terminal";
+import { AuthWrapper } from "@/components/auth/AuthWrapper";
+import { ResizablePanelGroup, ResizablePanel /*, ResizableHandle */ } from "@/components/ui/resizable";
+import { useSidebarStore } from "@/lib/store";
 
-export default function Home() {
-  return (
-    <>
-      <header className="sticky top-0 z-10 bg-background p-4 border-b-2 border-slate-200 dark:border-slate-800 flex flex-row justify-between items-center">
-        Convex + Next.js + Clerk
-        <UserButton />
-      </header>
-      <main className="p-8 flex flex-col gap-8">
-        <h1 className="text-4xl font-bold text-center">
-          Convex + Next.js + Clerk
-        </h1>
-        <Authenticated>
-          <Content />
-        </Authenticated>
-        <Unauthenticated>
-          <SignInForm />
-        </Unauthenticated>
-      </main>
-    </>
-  );
-}
-
-function SignInForm() {
-  return (
-    <div className="flex flex-col gap-8 w-96 mx-auto">
-      <p>Log in to see the numbers</p>
-      <SignInButton mode="modal">
-        <button className="bg-foreground text-background px-4 py-2 rounded-md">
-          Sign in
-        </button>
-      </SignInButton>
-      <SignUpButton mode="modal">
-        <button className="bg-foreground text-background px-4 py-2 rounded-md">
-          Sign up
-        </button>
-      </SignUpButton>
-    </div>
-  );
-}
-
-function Content() {
-  const { viewer, numbers } =
-    useQuery(api.myFunctions.listNumbers, {
-      count: 10,
-    }) ?? {};
-  const addNumber = useMutation(api.myFunctions.addNumber);
-
-  if (viewer === undefined || numbers === undefined) {
-    return (
-      <div className="mx-auto">
-        <p>loading... (consider a loading skeleton)</p>
-      </div>
-    );
-  }
+export default function HomePage() {
+  const { activePanel, setActivePanel } = useSidebarStore();
 
   return (
-    <div className="flex flex-col gap-8 max-w-lg mx-auto">
-      <p>Welcome {viewer ?? "Anonymous"}!</p>
-      <p>
-        Click the button below and open this page in another window - this data
-        is persisted in the Convex cloud database!
-      </p>
-      <p>
-        <button
-          className="bg-foreground text-background text-sm px-4 py-2 rounded-md"
-          onClick={() => {
-            void addNumber({ value: Math.floor(Math.random() * 10) });
-          }}
-        >
-          Add a random number
-        </button>
-      </p>
-      <p>
-        Numbers:{" "}
-        {numbers?.length === 0
-          ? "Click the button!"
-          : (numbers?.join(", ") ?? "...")}
-      </p>
-      <p>
-        Edit{" "}
-        <code className="text-sm font-bold font-mono bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded-md">
-          convex/myFunctions.ts
-        </code>{" "}
-        to change your backend
-      </p>
-      <p>
-        Edit{" "}
-        <code className="text-sm font-bold font-mono bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded-md">
-          app/page.tsx
-        </code>{" "}
-        to change your frontend
-      </p>
-      <p>
-        See the{" "}
-        <Link href="/server" className="underline hover:no-underline">
-          /server route
-        </Link>{" "}
-        for an example of loading data in a server component
-      </p>
-      <div className="flex flex-col">
-        <p className="text-lg font-bold">Useful resources:</p>
-        <div className="flex gap-2">
-          <div className="flex flex-col gap-2 w-1/2">
-            <ResourceCard
-              title="Convex docs"
-              description="Read comprehensive documentation for all Convex features."
-              href="https://docs.convex.dev/home"
-            />
-            <ResourceCard
-              title="Stack articles"
-              description="Learn about best practices, use cases, and more from a growing
-            collection of articles, videos, and walkthroughs."
-              href="https://www.typescriptlang.org/docs/handbook/2/basic-types.html"
-            />
+    <AuthWrapper>
+      <div className="h-screen w-screen flex flex-col bg-[#0e0e0e] text-[#cccccc] font-mono text-sm overflow-hidden relative">
+        {/* Title Bar - 32px */}
+        <header className="h-8 bg-[#181818] border-b border-[#2d2d2d] flex items-center px-0 select-none">
+          {/* Title */}
+          <div className="flex-1 flex justify-start ml-2">
+            <span className="text-xs text-[#858585]">
+              AURA - Automate Your Aura
+            </span>
           </div>
-          <div className="flex flex-col gap-2 w-1/2">
-            <ResourceCard
-              title="Templates"
-              description="Browse our collection of templates to get started quickly."
-              href="https://www.convex.dev/templates"
-            />
-            <ResourceCard
-              title="Discord"
-              description="Join our developer community to ask questions, trade tips & tricks,
-            and show off your projects."
-              href="https://www.convex.dev/community"
-            />
+        </header>
+
+        {/* Main Content Area with Resizable Panels */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Activity Bar */}
+          <DashActivityBar
+            activePanel={activePanel}
+            onPanelChange={setActivePanel}
+          />
+          
+          {/* Main work area with fixed sidebar and resizable terminal */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Sidebar - Fixed width */}
+            <DashSidebar activePanel={activePanel} />
+
+            {/* Editor and Terminal - Resizable vertical split */}
+            <ResizablePanelGroup direction="vertical" className="flex-1">
+              {/* Editor Panel */}
+              <ResizablePanel defaultSize={70} minSize={30}>
+                <DashEditor />
+              </ResizablePanel>
+              
+              {/* <ResizableHandle withHandle /> */}
+              
+              {/* Terminal Panel */}
+              <Terminal />
+            </ResizablePanelGroup>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
 
-function ResourceCard({
-  title,
-  description,
-  href,
-}: {
-  title: string;
-  description: string;
-  href: string;
-}) {
-  return (
-    <div className="flex flex-col gap-2 bg-slate-200 dark:bg-slate-800 p-4 rounded-md h-28 overflow-auto">
-      <a href={href} className="text-sm underline hover:no-underline">
-        {title}
-      </a>
-      <p className="text-xs">{description}</p>
-    </div>
+        {/* Status Bar - 22px */}
+        <footer className="h-[22px] bg-[#2d2d2d] text-[#cccccc] text-xs flex items-center px-2 justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1">
+              <Copyright className="w-3 h-3" />
+              <span>ACDC.digital</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <AlertCircle className="w-3 h-3" />
+              <span>0</span>
+            </div>
+            <span>AURA Dashboard v1.0.0</span>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <span className="text-[#cccccc]">▲ Next.js ^15 | Convex</span>
+            <span>Anthropic Claude 3.5 Sonnet</span>
+            <span className="text-[#858585]">
+              MCP Server: 0
+            </span>
+          </div>
+        </footer>
+      </div>
+    </AuthWrapper>
   );
 }

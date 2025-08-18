@@ -8,6 +8,9 @@ node_modules/
 out/
 dist/
 build/
+.next/cache/
+.next/static/
+.next/trace
 
 # Environment variables
 .env
@@ -15,6 +18,7 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+.env*.local
 
 # Convex
 .convex/
@@ -51,24 +55,27 @@ coverage/
 # TypeScript
 *.tsbuildinfo
 .tsc-cache/
+next-env.d.ts
 
-# Optional npm cache directory
-.npm
+# Testing
+coverage/
+*.lcov
+.nyc_output
+test-results/
+playwright-report/
+playwright/.cache/
 
-# Optional eslint cache
+# Cache directories
+.cache/
+.parcel-cache/
 .eslintcache
+.prettierrc
+.swc/
+.turbo/
 
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
+# Build outputs
 *.tgz
+*.tar.gz
 
 # Yarn Integrity file
 .yarn-integrity
@@ -159,3 +166,35 @@ yarn.lock
 
 # Ignore Mac system files
 **/.DS_Store
+
+# Modern Development Tools
+.trunk/
+.vite/
+.nitro/
+.nuxt/
+.output/
+.wrangler/
+
+# AI Development
+.claude/
+.cursor/
+.codewhisperer/
+
+# Development Analytics
+.vercel/analytics/
+.sentryclirc
+
+# Package managers
+.pnpm-store/
+.yarn/
+.yarnrc.yml
+
+# Security
+.env.example
+*.pem
+*.key
+*.cert
+
+# Performance monitoring
+.lighthouse/
+bundle-analyzer/

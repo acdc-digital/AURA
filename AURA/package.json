@@ -3,21 +3,28 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npm-run-all --parallel dev:frontend dev:backend",
-    "dev:frontend": "next dev",
-    "dev:backend": "convex dev",
-    "predev": "convex dev --until-success && convex dashboard",
+    "dev": "next dev --port 3333",
+    "convex": "convex dev",
+    "audit": "node app/tests/run-audit.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.25.0",
-    "@clerk/nextjs": "^6.12.6",
+    "@clerk/nextjs": "^6.31.1",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-slot": "^1.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "convex": "^1.25.4",
-    "next": "15.2.3",
+    "lucide-react": "^0.539.0",
+    "next": "15.4.6",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-resizable-panels": "^3.0.4",
+    "tailwind-merge": "^3.3.1",
+    "zustand": "^5.0.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -26,10 +33,11 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.2.3",
+    "eslint-config-next": "15.4.6",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.5.3",
     "tailwindcss": "^4",
+    "tw-animate-css": "^1.3.7",
     "typescript": "^5"
   }
 }
