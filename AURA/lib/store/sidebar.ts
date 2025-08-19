@@ -10,6 +10,7 @@ export type PanelType =
   | 'source-control'
   | 'extensions'
   | 'calendar' 
+  | 'social-connectors'
   | 'database' 
   | 'agents' 
   | 'terminal' 

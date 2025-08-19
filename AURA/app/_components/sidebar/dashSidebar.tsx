@@ -5,9 +5,10 @@
 
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { PanelType } from "@/lib/store";
-import { UserConsole } from "@/app/_components/activity/_components";
+import { UserConsole, AgentsPanel } from "@/app/_components/activity/_components";
 import { FileExplorerPanel } from "@/app/_components/activity/_components/fileExplorer";
 import CalendarPanel from "@/app/_components/activity/_components/calendar/CalendarPanel";
+import { DashSocialConnections } from "@/app/_components/activity/_components/connections/DashSocialConnections";
 
 interface DashSidebarProps {
   activePanel: PanelType;
@@ -43,6 +44,26 @@ export function DashSidebar({ activePanel }: DashSidebarProps) {
             <h3 className="text-[#cccccc] font-medium mb-4">CALENDAR</h3>
             <div className="text-[#858585] text-sm">
               <p className="mb-4">Sign in to manage your social media posts.</p>
+              <SignInButton mode="modal">
+                <button className="bg-[#007acc] hover:bg-[#005a9e] text-white px-3 py-1.5 rounded text-xs transition-colors">
+                  Sign In
+                </button>
+              </SignInButton>
+            </div>
+          </div>
+        );
+      
+      case 'social-connectors':
+        return <DashSocialConnections />;
+      
+      case 'agents':
+        return isSignedIn ? (
+          <AgentsPanel />
+        ) : (
+          <div className="p-4">
+            <h3 className="text-[#cccccc] font-medium mb-4">AGENTS</h3>
+            <div className="text-[#858585] text-sm">
+              <p className="mb-4">Sign in to access AI agents and automation tools.</p>
               <SignInButton mode="modal">
                 <button className="bg-[#007acc] hover:bg-[#005a9e] text-white px-3 py-1.5 rounded text-xs transition-colors">
                   Sign In

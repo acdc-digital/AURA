@@ -13,7 +13,7 @@ import {
     Bot,
     Bug,
     Calendar,
-    Database,
+    Contact,
     FileText,
     Settings,
     Terminal,
@@ -34,7 +34,7 @@ export function DashActivityBar({ activePanel, onPanelChange }: ActivityBarProps
   const activityItems: Array<{ id: PanelType; icon: LucideIcon; label: string }> = [
     { id: "explorer", icon: FileText, label: "Explorer" },
     { id: "calendar", icon: Calendar, label: "Calendar" },
-    { id: "database", icon: Database, label: "Database" },
+    { id: "social-connectors", icon: Contact, label: "Social Media Connectors" },
     { id: "agents", icon: Bot, label: "Agents" },
     { id: "terminal", icon: Terminal, label: "Terminal" },
     { id: "trash", icon: Trash2, label: "Trash" },
@@ -55,6 +55,12 @@ export function DashActivityBar({ activePanel, onPanelChange }: ActivityBarProps
     // Handle calendar special case - open both sidebar and tab
     if (id === 'calendar') {
       openSpecialTab('calendar', 'Calendar', 'calendar');
+    }
+    
+    // Handle social-connectors - sidebar only, no tab
+    if (id === 'social-connectors') {
+      onPanelChange('social-connectors');
+      return;
     }
     
     // Always set the active panel for sidebar

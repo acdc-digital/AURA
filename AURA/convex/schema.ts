@@ -184,7 +184,9 @@ export default defineSchema({
       v.literal("facebook"),
       v.literal("instagram"),
       v.literal("twitter"),
-      v.literal("reddit")
+      v.literal("reddit"),
+      v.literal("linkedin"),
+      v.literal("tiktok")
     ),
     username: v.string(),
     

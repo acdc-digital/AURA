@@ -3,6 +3,7 @@ import "./globals.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { ClerkProvider } from "@clerk/nextjs";
 import { AuthSync } from "./_components/auth/AuthSync";
+import { AgentInitializer } from "./_components/agents/AgentInitializer";
 
 export const metadata: Metadata = {
   title: "AURA - AI Development Environment",
@@ -23,6 +24,7 @@ export default function RootLayout({
         <ClerkProvider dynamic>
           <ConvexClientProvider>
             <AuthSync />
+            <AgentInitializer />
             <div className="flex-1">
               {children}
             </div>
