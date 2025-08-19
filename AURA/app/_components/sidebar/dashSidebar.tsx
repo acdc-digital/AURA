@@ -6,6 +6,7 @@
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { PanelType } from "@/lib/store";
 import { UserConsole, AgentsPanel } from "@/app/_components/activity/_components";
+import { ExtensionsPanel } from "@/app/_components/activity/_components/extensions";
 import { FileExplorerPanel } from "@/app/_components/activity/_components/fileExplorer";
 import CalendarPanel from "@/app/_components/activity/_components/calendar/CalendarPanel";
 import { DashSocialConnections } from "@/app/_components/activity/_components/connections/DashSocialConnections";
@@ -122,21 +123,7 @@ export function DashSidebar({ activePanel }: DashSidebarProps) {
         );
       
       case 'extensions':
-        return (
-          <div className="p-4">
-            <h3 className="text-[#cccccc] font-medium mb-4">AI EXTENSIONS</h3>
-            <div className="text-[#858585] text-sm space-y-2">
-              <div className="p-2 bg-[#2d2d2d] rounded">
-                <div className="text-[#cccccc] text-xs font-medium">Code Assistant</div>
-                <div className="text-xs">AI-powered coding help</div>
-              </div>
-              <div className="p-2 bg-[#2d2d2d] rounded">
-                <div className="text-[#cccccc] text-xs font-medium">Smart Debug</div>
-                <div className="text-xs">Intelligent error detection</div>
-              </div>
-            </div>
-          </div>
-        );
+        return <ExtensionsPanel />;
       
       case 'account':
         return <UserConsole />;

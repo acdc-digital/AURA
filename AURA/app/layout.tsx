@@ -4,6 +4,7 @@ import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { ClerkProvider } from "@clerk/nextjs";
 import { AuthSync } from "./_components/auth/AuthSync";
 import { AgentInitializer } from "./_components/agents/AgentInitializer";
+import { ExtensionInitializer } from "./_components/extensions/ExtensionInitializer";
 
 export const metadata: Metadata = {
   title: "AURA - AI Development Environment",
@@ -25,6 +26,7 @@ export default function RootLayout({
           <ConvexClientProvider>
             <AuthSync />
             <AgentInitializer />
+            <ExtensionInitializer />
             <div className="flex-1">
               {children}
             </div>
