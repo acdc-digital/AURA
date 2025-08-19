@@ -23,8 +23,9 @@ interface FileTreeItemProps {
 }
 
 export function FileTreeItem({ file, onOpen, onRename }: FileTreeItemProps) {
+  // Ephemeral UI state for inline renaming - not business data
   const [isRenaming, setIsRenaming] = useState(false);
-  const [newName, setNewName] = useState(file.name);
+  const [tempRenameValue, setTempRenameValue] = useState('');
 
   // Get file icon based on type and platform
   const getFileIcon = () => {
@@ -86,13 +87,13 @@ export function FileTreeItem({ file, onOpen, onRename }: FileTreeItemProps) {
   };
 
   const handleRename = () => {
-    if (!newName.trim() || newName === file.name) {
+    if (!tempRenameValue.trim() || tempRenameValue === file.name) {
       setIsRenaming(false);
-      setNewName(file.name);
+      setTempRenameValue(file.name);
       return;
     }
     
-    onRename?.(newName.trim());
+    onRename?.(tempRenameValue.trim());
     setIsRenaming(false);
   };
 
@@ -103,12 +104,13 @@ export function FileTreeItem({ file, onOpen, onRename }: FileTreeItemProps) {
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setIsRenaming(false);
-      setNewName(file.name);
+      setTempRenameValue(file.name);
     }
   };
 
   const handleDoubleClick = () => {
     if (onRename) {
+      setTempRenameValue(file.name); // Initialize with current name when renaming starts
       setIsRenaming(true);
     }
   };
@@ -121,8 +123,8 @@ export function FileTreeItem({ file, onOpen, onRename }: FileTreeItemProps) {
         <Icon className="w-4 h-4 flex-shrink-0 text-[#858585]" />
         <input
           type="text"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
+          value={tempRenameValue}
+          onChange={(e) => setTempRenameValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={handleRename}
           placeholder="File name"
