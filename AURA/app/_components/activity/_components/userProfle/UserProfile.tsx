@@ -3,16 +3,11 @@
 
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useEditorStore } from "@/lib/store";
 import { useUser } from "@/lib/hooks";
 import {
   Calendar,
   Copy,
-  Save,
-  Shield,
-  X,
   User,
   Database
 } from "lucide-react";
@@ -21,10 +16,11 @@ import { useState, useEffect } from "react";
 export function UserProfile() {
   // Use our custom hook that follows state architecture principles
   const { user, isLoading, updateProfile, stats, isStatsLoading } = useUser();
-  const { markTabDirty, userProfileView, setUserProfileView } = useEditorStore();
+  const { markTabDirty, userProfileView } = useEditorStore();
   
   // Local ephemeral state (UI only) - temporary editing state, not persistent business data
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [editingState, setEditingState] = useState({
     firstName: '',
     lastName: '',
@@ -60,7 +56,7 @@ export function UserProfile() {
       
       // Reset dirty state after successful save
       markTabDirty('user-profile', false);
-      setUserProfileView('profile');
+      setIsEditMode(false);
     } catch (error) {
       console.error('Failed to save user profile:', error);
       // TODO: Add proper error handling/toast notification
@@ -79,7 +75,7 @@ export function UserProfile() {
       });
     }
     markTabDirty('user-profile', false);
-    setUserProfileView('profile');
+    setIsEditMode(false);
   };
 
   // Loading state
@@ -107,51 +103,48 @@ export function UserProfile() {
   return (
     <div className="flex-1 flex flex-col bg-[#1e1e1e] text-[#cccccc]">
       {/* Header */}
-      <div className="flex-shrink-0 bg-[#2d2d2d] border-b border-[#454545] px-6 py-4">
+      <div className="flex-shrink-0 bg-[#1e1e1e] border-b border-[#2d2d30] px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-[#007acc] rounded-full flex items-center justify-center">
+            <div className="w-8 h-8 bg-[#007acc] flex items-center justify-center">
               <User className="w-4 h-4 text-white" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-[#cccccc]">User Profile</h1>
               <p className="text-sm text-[#858585]">
-                {userProfileView === 'profile' ? 'View account information' : 'Edit account settings'}
+                {userProfileView === 'profile' ? 'View account information' : 'Account settings'}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {userProfileView === 'settings' && (
               <>
-                <Button
-                  onClick={handleCancel}
-                  variant="ghost"
-                  size="sm"
-                  className="text-[#858585] hover:text-[#cccccc] border border-[#2d2d2d] hover:border-[#454545]"
-                  disabled={isSaving}
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  size="sm"
-                  className="bg-[#007acc] hover:bg-[#005a9e] text-white"
-                  disabled={isSaving}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {isSaving ? 'Saving...' : 'Save'}
-                </Button>
+                {isEditMode ? (
+                  <>
+                    <button
+                      onClick={handleCancel}
+                      disabled={isSaving}
+                      className="text-[13px] text-[#858585] hover:text-[#cccccc] disabled:text-[#6a6a6a] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="text-[13px] text-[#007acc] hover:text-white disabled:text-[#6a6a6a] transition-colors ml-3"
+                    >
+                      {isSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setIsEditMode(true)}
+                    className="text-[13px] text-[#007acc] hover:text-white transition-colors"
+                  >
+                    Edit
+                  </button>
+                )}
               </>
-            )}
-            {userProfileView === 'profile' && (
-              <Button
-                onClick={() => setUserProfileView('settings')}
-                size="sm"
-                className="bg-[#007acc] hover:bg-[#005a9e] text-white"
-              >
-                Edit Profile
-              </Button>
             )}
           </div>
         </div>
@@ -166,6 +159,7 @@ export function UserProfile() {
             user={user}
             editingState={editingState}
             isSaving={isSaving}
+            isEditMode={isEditMode}
             onInputChange={handleInputChange}
             onSave={handleSave}
             onCancel={handleCancel}
@@ -187,267 +181,489 @@ function ProfileViewContent({ user, stats, isStatsLoading }: {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* User Overview Card */}
-      <div className="bg-[#2d2d2d] rounded-lg p-6 border border-[#454545]">
-        <div className="flex items-center space-x-4">
-          <div className="w-16 h-16 bg-[#007acc] rounded-full flex items-center justify-center">
-            <User className="w-8 h-8 text-white" />
+    <div className="flex-1 bg-[#1e1e1e]">
+      {/* Account Information Section */}
+      <div className="border-b border-[#2d2d30]">
+        <div className="px-4 py-2">
+          <h3 className="text-[11px] uppercase tracking-wide text-[#cccccc] font-semibold flex items-center">
+            <Database className="w-3 h-3 mr-2" />
+            ACCOUNT INFORMATION
+          </h3>
+        </div>
+        
+        {/* Table-like layout */}
+        <div className="px-4 pb-4">
+          {/* Table Headers */}
+          <div className="grid grid-cols-4 gap-4 pb-2 border-b border-[#2d2d30]/50">
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide">Field</div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide col-span-2">Value</div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide text-left pl-4">Actions</div>
           </div>
-          <div>
-            <h3 className="text-xl font-semibold text-[#cccccc]">
-              {user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Unnamed User'}
-            </h3>
-            <p className="text-[#858585]">{user?.email || 'No email provided'}</p>
+          
+          {/* Table Rows */}
+          <div className="space-y-2 pt-2">
+            {/* Display Name Row */}
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Display Name</div>
+              <div className="text-[13px] text-[#cccccc] col-span-2">
+                {user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Not set'}
+              </div>
+              <div></div>
+            </div>
+            
+            {/* Username Row */}
             {user?.username && (
-              <p className="text-[#007acc]">@{user.username}</p>
+              <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+                <div className="text-[13px] text-[#cccccc]">Username</div>
+                <div className="text-[13px] text-[#007acc] col-span-2">@{user.username}</div>
+                <div></div>
+              </div>
             )}
-          </div>
-        </div>
-      </div>
-
-      {/* Account Information */}
-      <div className="bg-[#2d2d2d] rounded-lg p-6 border border-[#454545]">
-        <h3 className="text-lg font-semibold text-[#cccccc] mb-4 flex items-center">
-          <Database className="w-5 h-5 mr-2 text-[#007acc]" />
-          Account Information
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[#858585] mb-1">Email</label>
-            <div className="flex items-center">
-              <span className="text-[#cccccc]">{user?.email || 'Not provided'}</span>
-              {user?.email && (
-                <Button
-                  onClick={() => copyToClipboard(user.email)}
-                  variant="ghost"
-                  size="sm"
-                  className="ml-2 p-1 h-6 w-6 text-[#858585] hover:text-[#cccccc]"
-                >
-                  <Copy className="w-3 h-3" />
-                </Button>
-              )}
+            
+            {/* Email Row */}
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Email</div>
+              <div className="text-[13px] text-[#cccccc] font-mono col-span-2">
+                {user?.email || 'Not provided'}
+              </div>
+              <div className="text-left pl-4">
+                {user?.email && (
+                  <button
+                    onClick={() => copyToClipboard(user.email)}
+                    className="text-[#858585] hover:text-[#cccccc] transition-colors text-[11px] uppercase tracking-wide inline-flex items-center gap-1"
+                    title="Copy email"
+                  >
+                    <Copy className="w-3 h-3" />
+                    COPY
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[#858585] mb-1">User ID</label>
-            <div className="flex items-center">
-              <span className="text-[#cccccc] font-mono text-xs">{user?._id || 'Loading...'}</span>
-              {user?._id && (
-                <Button
-                  onClick={() => copyToClipboard(user._id)}
-                  variant="ghost"
-                  size="sm"
-                  className="ml-2 p-1 h-6 w-6 text-[#858585] hover:text-[#cccccc]"
-                >
-                  <Copy className="w-3 h-3" />
-                </Button>
-              )}
+            
+            {/* User ID Row */}
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">User ID</div>
+              <div className="text-[12px] text-[#cccccc] font-mono col-span-2">
+                {user?._id || 'Loading...'}
+              </div>
+              <div className="text-left pl-4">
+                {user?._id && (
+                  <button
+                    onClick={() => copyToClipboard(user._id)}
+                    className="text-[#858585] hover:text-[#cccccc] transition-colors text-[11px] uppercase tracking-wide inline-flex items-center gap-1"
+                    title="Copy user ID"
+                  >
+                    <Copy className="w-3 h-3" />
+                    COPY
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[#858585] mb-1">Member Since</label>
-            <div className="flex items-center">
-              <Calendar className="w-4 h-4 mr-2 text-[#858585]" />
-              <span className="text-[#cccccc]">
+            
+            {/* Member Since Row */}
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Member Since</div>
+              <div className="text-[13px] text-[#cccccc] col-span-2 flex items-center">
+                <Calendar className="w-3 h-3 mr-2 text-[#858585]" />
                 {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
-              </span>
+              </div>
+              <div></div>
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[#858585] mb-1">Last Updated</label>
-            <div className="flex items-center">
-              <Calendar className="w-4 h-4 mr-2 text-[#858585]" />
-              <span className="text-[#cccccc]">
+            
+            {/* Last Updated Row */}
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Last Updated</div>
+              <div className="text-[13px] text-[#cccccc] col-span-2 flex items-center">
+                <Calendar className="w-3 h-3 mr-2 text-[#858585]" />
                 {user?.updatedAt ? new Date(user.updatedAt).toLocaleDateString() : 'Never'}
-              </span>
+              </div>
+              <div></div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* User Statistics */}
-      <div className="bg-[#2d2d2d] rounded-lg p-6 border border-[#454545]">
-        <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Activity Statistics</h3>
-        {isStatsLoading ? (
-          <p className="text-[#858585]">Loading statistics...</p>
-        ) : stats ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[#007acc]">{stats?.projectCount || 0}</div>
-              <div className="text-sm text-[#858585]">Projects</div>
+      {/* Activity Statistics Section */}
+      <div>
+        <div className="px-4 py-2">
+          <h3 className="text-[11px] uppercase tracking-wide text-[#cccccc] font-semibold">
+            ACTIVITY STATISTICS
+          </h3>
+        </div>
+        
+        <div className="px-4 pb-4">
+          {isStatsLoading ? (
+            <div className="text-[13px] text-[#858585]">Loading statistics...</div>
+          ) : stats ? (
+            <div>
+              {/* Stats Table Headers */}
+              <div className="grid grid-cols-4 gap-4 pb-2 border-b border-[#2d2d30]/50">
+                <div className="text-[11px] uppercase text-[#858585] tracking-wide">Metric</div>
+                <div className="text-[11px] uppercase text-[#858585] tracking-wide">Count</div>
+                <div className="text-[11px] uppercase text-[#858585] tracking-wide">Status</div>
+                <div className="text-[11px] uppercase text-[#858585] tracking-wide">Updated</div>
+              </div>
+              
+              {/* Stats Table Rows */}
+              <div className="space-y-2 pt-2">
+                <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+                  <div className="text-[13px] text-[#cccccc]">Projects</div>
+                  <div className="text-[16px] font-bold text-[#007acc] font-mono">{stats?.projectCount || 0}</div>
+                  <div className="text-[11px] text-[#4ec9b0] uppercase tracking-wide">ACTIVE</div>
+                  <div className="text-[11px] text-[#858585] uppercase tracking-wide">RECENT</div>
+                </div>
+                
+                <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+                  <div className="text-[13px] text-[#cccccc]">Files</div>
+                  <div className="text-[16px] font-bold text-[#007acc] font-mono">{stats?.fileCount || 0}</div>
+                  <div className="text-[11px] text-[#4ec9b0] uppercase tracking-wide">SYNCED</div>
+                  <div className="text-[11px] text-[#858585] uppercase tracking-wide">RECENT</div>
+                </div>
+                
+                <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+                  <div className="text-[13px] text-[#cccccc]">Connections</div>
+                  <div className="text-[16px] font-bold text-[#007acc] font-mono">{stats?.socialConnectionCount || 0}</div>
+                  <div className="text-[11px] text-[#858585] uppercase tracking-wide">IDLE</div>
+                  <div className="text-[11px] text-[#858585] uppercase tracking-wide">24H</div>
+                </div>
+                
+                <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+                  <div className="text-[13px] text-[#cccccc]">Active Sessions</div>
+                  <div className="text-[16px] font-bold text-[#007acc] font-mono">{stats?.activeConnections || 0}</div>
+                  <div className="text-[11px] text-[#007acc] uppercase tracking-wide">ONLINE</div>
+                  <div className="text-[11px] text-[#858585] uppercase tracking-wide">NOW</div>
+                </div>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[#007acc]">{stats?.fileCount || 0}</div>
-              <div className="text-sm text-[#858585]">Files</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[#007acc]">{stats?.socialConnectionCount || 0}</div>
-              <div className="text-sm text-[#858585]">Connections</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[#007acc]">{stats?.activeConnections || 0}</div>
-              <div className="text-sm text-[#858585]">Active</div>
-            </div>
-          </div>
-        ) : (
-          <p className="text-[#858585]">No statistics available</p>
-        )}
+          ) : (
+            <div className="text-[13px] text-[#858585]">No statistics available</div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 // Settings View Component - Editable form for user settings  
-function SettingsViewContent({ user, editingState, isSaving, onInputChange, onSave, onCancel }: {
+function SettingsViewContent({ user, editingState, isSaving, isEditMode, onInputChange, onSave, onCancel }: {
   user: NonNullable<ReturnType<typeof useUser>['user']>;
   editingState: { firstName: string; lastName: string; username: string };
   isSaving: boolean;
+  isEditMode: boolean;
   onInputChange: (field: keyof { firstName: string; lastName: string; username: string }, value: string) => void;
   onSave: () => void;
   onCancel: () => void;
 }) {
   return (
-    <div className="p-6 space-y-6">
-      {/* Profile Settings */}
-      <div className="bg-[#2d2d2d] rounded-lg p-6 border border-[#454545]">
-        <h3 className="text-lg font-semibold text-[#cccccc] mb-4 flex items-center">
-          <User className="w-5 h-5 mr-2 text-[#007acc]" />
-          Profile Settings
-        </h3>
-        <div className="space-y-4">
-          {/* First Name */}
-          <div>
-            <label className="block text-sm font-medium text-[#cccccc] mb-2">
-              First Name
-            </label>
-            <input
-              type="text"
-              value={editingState.firstName}
-              onChange={(e) => onInputChange('firstName', e.target.value)}
-              className="w-full px-3 py-2 bg-[#3c3c3c] border border-[#454545] rounded-md text-[#cccccc] text-sm focus:outline-none focus:border-[#007acc]"
-              placeholder="Enter your first name"
-            />
+    <div className="flex-1 bg-[#1e1e1e]">
+      {/* Profile Settings Section */}
+      <div className="border-b border-[#2d2d30]">
+        <div className="px-4 py-2">
+          <h3 className="text-[11px] uppercase tracking-wide text-[#cccccc] font-semibold">
+            USER SETTINGS
+          </h3>
+        </div>
+        
+        {/* Table-like layout */}
+        <div className="px-4 pb-4">
+          {/* Table Headers */}
+          <div className="grid grid-cols-4 gap-4 pb-2 border-b border-[#2d2d30]/50">
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide">Field</div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide col-span-2">
+              {isEditMode ? 'Edit Value' : 'Current Value'}
+            </div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide text-right">Status</div>
           </div>
+          
+          {/* Table Rows */}
+          <div className="space-y-2 pt-2">
+            {/* First Name Row */}
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">First Name</div>
+              <div className="col-span-2">
+                {isEditMode ? (
+                  <input
+                    type="text"
+                    value={editingState.firstName}
+                    onChange={(e) => onInputChange('firstName', e.target.value)}
+                    className="w-full px-2 py-1 bg-[#3c3c3c] border border-[#454545] text-[#cccccc] text-[13px] focus:outline-none focus:border-[#007acc] transition-colors"
+                    placeholder="Enter first name"
+                  />
+                ) : (
+                  <div className="text-[13px] text-[#cccccc] px-2 py-1">
+                    {user?.firstName || 'Not set'}
+                  </div>
+                )}
+              </div>
+              <div className="text-right">
+                <span className="text-[11px] text-[#858585] uppercase tracking-wide">
+                  {isEditMode ? 'EDITING' : 'EDITABLE'}
+                </span>
+              </div>
+            </div>
 
-          {/* Last Name */}
-          <div>
-            <label className="block text-sm font-medium text-[#cccccc] mb-2">
-              Last Name
-            </label>
-            <input
-              type="text"
-              value={editingState.lastName}
-              onChange={(e) => onInputChange('lastName', e.target.value)}
-              className="w-full px-3 py-2 bg-[#3c3c3c] border border-[#454545] rounded-md text-[#cccccc] text-sm focus:outline-none focus:border-[#007acc]"
-              placeholder="Enter your last name"
-            />
-          </div>
+            {/* Last Name Row */}
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Last Name</div>
+              <div className="col-span-2">
+                {isEditMode ? (
+                  <input
+                    type="text"
+                    value={editingState.lastName}
+                    onChange={(e) => onInputChange('lastName', e.target.value)}
+                    className="w-full px-2 py-1 bg-[#3c3c3c] border border-[#454545] text-[#cccccc] text-[13px] focus:outline-none focus:border-[#007acc] transition-colors"
+                    placeholder="Enter last name"
+                  />
+                ) : (
+                  <div className="text-[13px] text-[#cccccc] px-2 py-1">
+                    {user?.lastName || 'Not set'}
+                  </div>
+                )}
+              </div>
+              <div className="text-right">
+                <span className="text-[11px] text-[#858585] uppercase tracking-wide">
+                  {isEditMode ? 'EDITING' : 'EDITABLE'}
+                </span>
+              </div>
+            </div>
 
-          {/* Username */}
-          <div>
-            <label className="block text-sm font-medium text-[#cccccc] mb-2">
-              Username
-            </label>
-            <input
-              type="text"
-              value={editingState.username}
-              onChange={(e) => onInputChange('username', e.target.value)}
-              className="w-full px-3 py-2 bg-[#3c3c3c] border border-[#454545] rounded-md text-[#cccccc] text-sm focus:outline-none focus:border-[#007acc]"
-              placeholder="Enter your username"
-            />
-          </div>
+            {/* Username Row */}
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Username</div>
+              <div className="col-span-2">
+                {isEditMode ? (
+                  <input
+                    type="text"
+                    value={editingState.username}
+                    onChange={(e) => onInputChange('username', e.target.value)}
+                    className="w-full px-2 py-1 bg-[#3c3c3c] border border-[#454545] text-[#cccccc] text-[13px] focus:outline-none focus:border-[#007acc] transition-colors"
+                    placeholder="Enter username"
+                  />
+                ) : (
+                  <div className="text-[13px] text-[#007acc] px-2 py-1">
+                    {user?.username ? `@${user.username}` : 'Not set'}
+                  </div>
+                )}
+              </div>
+              <div className="text-right">
+                <span className="text-[11px] text-[#858585] uppercase tracking-wide">
+                  {isEditMode ? 'EDITING' : 'EDITABLE'}
+                </span>
+              </div>
+            </div>
 
-          {/* Email (read-only) */}
-          <div>
-            <label className="block text-sm font-medium text-[#cccccc] mb-2">
-              Email
-              <span className="text-xs text-[#858585] ml-2">(managed by Clerk)</span>
-            </label>
-            <input
-              type="email"
-              value={user?.email || ''}
-              disabled
-              title="Email address (managed by Clerk authentication)"
-              placeholder="No email provided"
-              className="w-full px-3 py-2 bg-[#2d2d2d] border border-[#454545] rounded-md text-[#858585] text-sm cursor-not-allowed"
-            />
+            {/* Email Row (always read-only) */}
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Email</div>
+              <div className="text-[13px] text-[#6a6a6a] px-2 py-1 col-span-2 font-mono">
+                {user?.email || 'No email provided'}
+              </div>
+              <div className="text-right">
+                <span className="text-[11px] text-[#6a6a6a] uppercase tracking-wide">
+                  CLERK
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Save/Cancel Actions */}
-        <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-[#454545]">
-          <Button
-            onClick={onCancel}
-            variant="ghost"
-            size="sm"
-            className="text-[#858585] hover:text-[#cccccc] border border-[#2d2d2d] hover:border-[#454545]"
-            disabled={isSaving}
-          >
-            <X className="w-4 h-4 mr-2" />
-            Cancel
-          </Button>
-          <Button
-            onClick={onSave}
-            size="sm"
-            className="bg-[#007acc] hover:bg-[#005a9e] text-white"
-            disabled={isSaving}
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </Button>
+        {/* Action Buttons - only show when in edit mode */}
+        {isEditMode && (
+          <div className="px-4 pb-4 pt-2 border-t border-[#2d2d30]/50 flex items-center justify-end gap-3">
+            <button
+              onClick={onCancel}
+              disabled={isSaving}
+              className="text-[13px] text-[#858585] hover:text-[#cccccc] disabled:text-[#6a6a6a] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onSave}
+              disabled={isSaving}
+              className="text-[13px] text-[#007acc] hover:text-white disabled:text-[#6a6a6a] transition-colors"
+            >
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Security & Privacy Section */}
+      <div className="border-b border-[#2d2d30]">
+        <div className="px-4 py-2">
+          <h3 className="text-[11px] uppercase tracking-wide text-[#cccccc] font-semibold">
+            SECURITY & PRIVACY
+          </h3>
+        </div>
+        <div className="px-4 pb-4">
+          {/* Table Headers */}
+          <div className="grid grid-cols-4 gap-4 pb-2 border-b border-[#2d2d30]/50">
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide">Setting</div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide">Description</div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide">Status</div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide text-right">Actions</div>
+          </div>
+          
+          {/* Security Settings Rows */}
+          <div className="space-y-2 pt-2">
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Two-Factor Auth</div>
+              <div className="text-[13px] text-[#858585]">Extra security layer</div>
+              <div>
+                <span className="text-[11px] text-[#6a6a6a] uppercase tracking-wide">DISABLED</span>
+              </div>
+              <div className="text-right">
+                <button className="text-[11px] text-[#858585] hover:text-[#cccccc] uppercase tracking-wide transition-colors">
+                  ENABLE
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Email Notifications</div>
+              <div className="text-[13px] text-[#858585]">Activity updates</div>
+              <div>
+                <span className="text-[11px] text-[#007acc] uppercase tracking-wide">ENABLED</span>
+              </div>
+              <div className="text-right">
+                <button className="text-[11px] text-[#858585] hover:text-[#cccccc] uppercase tracking-wide transition-colors">
+                  DISABLE
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Session Timeout</div>
+              <div className="text-[13px] text-[#858585]">Auto-logout timer</div>
+              <div>
+                <span className="text-[11px] text-[#858585] uppercase tracking-wide">24H</span>
+              </div>
+              <div className="text-right">
+                <button className="text-[11px] text-[#858585] hover:text-[#cccccc] uppercase tracking-wide transition-colors">
+                  CHANGE
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Additional Settings Sections */}
-      <div className="bg-[#2d2d2d] rounded-lg p-6 border border-[#454545]">
-        <h3 className="text-lg font-semibold text-[#cccccc] mb-4 flex items-center">
-          <Shield className="w-5 h-5 mr-2 text-[#007acc]" />
-          Privacy & Security
-        </h3>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[#cccccc] font-medium">Two-Factor Authentication</p>
-              <p className="text-sm text-[#858585]">Add an extra layer of security to your account</p>
-            </div>
-            <Badge variant="outline" className="text-[#858585] border-[#454545]">
-              Not Enabled
-            </Badge>
+      {/* Editor Preferences Section */}
+      <div className="border-b border-[#2d2d30]">
+        <div className="px-4 py-2">
+          <h3 className="text-[11px] uppercase tracking-wide text-[#cccccc] font-semibold">
+            EDITOR PREFERENCES
+          </h3>
+        </div>
+        <div className="px-4 pb-4">
+          {/* Table Headers */}
+          <div className="grid grid-cols-4 gap-4 pb-2 border-b border-[#2d2d30]/50">
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide">Preference</div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide">Description</div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide">Value</div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide text-right">Actions</div>
           </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[#cccccc] font-medium">Email Notifications</p>
-              <p className="text-sm text-[#858585]">Receive updates about your account activity</p>
+          
+          {/* Editor Settings Rows */}
+          <div className="space-y-2 pt-2">
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Auto-save</div>
+              <div className="text-[13px] text-[#858585]">Save changes automatically</div>
+              <div>
+                <span className="text-[11px] text-[#007acc] uppercase tracking-wide">ENABLED</span>
+              </div>
+              <div className="text-right">
+                <button className="text-[11px] text-[#858585] hover:text-[#cccccc] uppercase tracking-wide transition-colors">
+                  TOGGLE
+                </button>
+              </div>
             </div>
-            <Badge variant="outline" className="text-[#007acc] border-[#007acc]">
-              Enabled
-            </Badge>
+            
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Word Wrap</div>
+              <div className="text-[13px] text-[#858585]">Wrap long lines</div>
+              <div>
+                <span className="text-[11px] text-[#007acc] uppercase tracking-wide">ON</span>
+              </div>
+              <div className="text-right">
+                <button className="text-[11px] text-[#858585] hover:text-[#cccccc] uppercase tracking-wide transition-colors">
+                  TOGGLE
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Font Size</div>
+              <div className="text-[13px] text-[#858585]">Editor font size</div>
+              <div>
+                <span className="text-[11px] text-[#858585] uppercase tracking-wide">14PX</span>
+              </div>
+              <div className="text-right">
+                <button className="text-[11px] text-[#858585] hover:text-[#cccccc] uppercase tracking-wide transition-colors">
+                  ADJUST
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Preferences Section */}
-      <div className="bg-[#2d2d2d] rounded-lg p-6 border border-[#454545]">
-        <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Preferences</h3>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[#cccccc] font-medium">Dark Theme</p>
-              <p className="text-sm text-[#858585]">Use dark mode interface</p>
-            </div>
-            <Badge variant="outline" className="text-[#007acc] border-[#007acc]">
-              Enabled
-            </Badge>
+      {/* Workspace Preferences Section */}
+      <div>
+        <div className="px-4 py-2">
+          <h3 className="text-[11px] uppercase tracking-wide text-[#cccccc] font-semibold">
+            WORKSPACE
+          </h3>
+        </div>
+        <div className="px-4 pb-4">
+          {/* Table Headers */}
+          <div className="grid grid-cols-4 gap-4 pb-2 border-b border-[#2d2d30]/50">
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide">Setting</div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide">Description</div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide">Value</div>
+            <div className="text-[11px] uppercase text-[#858585] tracking-wide text-right">Actions</div>
           </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[#cccccc] font-medium">Auto-save</p>
-              <p className="text-sm text-[#858585]">Automatically save changes as you type</p>
+          
+          {/* Workspace Settings Rows */}
+          <div className="space-y-2 pt-2">
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Color Theme</div>
+              <div className="text-[13px] text-[#858585]">Interface appearance</div>
+              <div>
+                <span className="text-[11px] text-[#007acc] uppercase tracking-wide">DARK+</span>
+              </div>
+              <div className="text-right">
+                <button className="text-[11px] text-[#858585] hover:text-[#cccccc] uppercase tracking-wide transition-colors">
+                  CHANGE
+                </button>
+              </div>
             </div>
-            <Badge variant="outline" className="text-[#007acc] border-[#007acc]">
-              Enabled
-            </Badge>
+            
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Activity Bar</div>
+              <div className="text-[13px] text-[#858585]">Primary navigation</div>
+              <div>
+                <span className="text-[11px] text-[#007acc] uppercase tracking-wide">VISIBLE</span>
+              </div>
+              <div className="text-right">
+                <button className="text-[11px] text-[#858585] hover:text-[#cccccc] uppercase tracking-wide transition-colors">
+                  HIDE
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 gap-4 py-1 hover:bg-[#2a2d2e] transition-colors">
+              <div className="text-[13px] text-[#cccccc]">Sidebar Position</div>
+              <div className="text-[13px] text-[#858585]">Panel placement</div>
+              <div>
+                <span className="text-[11px] text-[#858585] uppercase tracking-wide">LEFT</span>
+              </div>
+              <div className="text-right">
+                <button className="text-[11px] text-[#858585] hover:text-[#cccccc] uppercase tracking-wide transition-colors">
+                  SWITCH
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

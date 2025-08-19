@@ -6,8 +6,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/lib/store";
 import { useConvexAuth } from "convex/react";
-import { ChevronLeft, ChevronRight, Plus, X, FileCode, FileText, Settings, CreditCard, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, FileCode, FileText, Settings, CreditCard, User, Calendar } from "lucide-react";
 import { UserProfile } from "@/app/_components/activity/_components/userProfle/UserProfile";
+import { FileExplorerTab } from "@/app/_components/activity/_components/fileExplorer";
+import { CalendarTab } from "@/app/_components/activity/_components/calendar";
 
 export function Navigator() {
   const { 
@@ -84,6 +86,8 @@ export function Navigator() {
         return CreditCard;
       case 'user-profile':
         return User;
+      case 'calendar':
+        return Calendar;
       default:
         return FileCode;
     }
@@ -199,6 +203,8 @@ export function Navigator() {
         {currentTab ? (
           <>
             {currentTab.type === 'user-profile' && <UserProfile />}
+            {currentTab.type === 'file' && currentTab.id === 'file-explorer' && <FileExplorerTab />}
+            {currentTab.type === 'calendar' && <CalendarTab />}
             {currentTab.type === 'subscription' && (
               <div className="p-8 text-center">
                 <h2 className="text-xl font-semibold text-[#cccccc] mb-4">
@@ -219,14 +225,26 @@ export function Navigator() {
                 </p>
               </div>
             )}
-            {(currentTab.type === 'file' || currentTab.type === 'welcome') && (
+            {(currentTab.type === 'file' && currentTab.id !== 'file-explorer') && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center space-y-4">
                   <h2 className="text-xl font-semibold text-[#cccccc]">
                     {currentTab.title}
                   </h2>
                   <p className="text-[#858585]">
-                    {currentTab.type === 'welcome' ? 'Welcome to AURA!' : 'Edit your file here'}
+                    Edit your file here
+                  </p>
+                </div>
+              </div>
+            )}
+            {currentTab.type === 'welcome' && (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center space-y-4">
+                  <h2 className="text-xl font-semibold text-[#cccccc]">
+                    {currentTab.title}
+                  </h2>
+                  <p className="text-[#858585]">
+                    Welcome to AURA!
                   </p>
                 </div>
               </div>

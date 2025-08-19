@@ -4,7 +4,7 @@
 'use client'
 
 import { FC } from 'react'
-import { Dashboard } from './Dashboard'
+import { Dashboard } from '@/app/_components/dashboard/Dashboard'
 
 interface DashboardLayoutProps {
   children?: React.ReactNode

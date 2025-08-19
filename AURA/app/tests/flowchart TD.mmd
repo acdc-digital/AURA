@@ -1,0 +1,87 @@
+flowchart TD
+    %% Entry Point
+    Start(["`🚀 **pnpm state**
+    Command Entry Point`"]) --> Audit{"`🔍 **State Auditor**
+    Enhanced TypeScript Implementation`"}
+    
+    %% File Discovery
+    Audit --> Discovery["`📁 **File Discovery**
+    - 23 Component Files (.tsx)
+    - 4 Store Files (.ts)  
+    - 2 Hook Files (.ts)
+    - 3 Convex Files (.ts)`"]
+    
+    %% Audit Categories
+    Discovery --> AuthSync["`🔐 **Authentication Sync**
+    Clerk ↔ Convex Integration`"]
+    Discovery --> DataFlow["`🌊 **Data Flow Architecture** 
+    Server vs Client State`"]
+    Discovery --> StateSep["`📊 **State Separation**
+    Business vs UI Data`"]
+    Discovery --> TypeSafety["`🔒 **Type Safety**
+    TypeScript Compliance`"]
+    Discovery --> Performance["`⚡ **Performance**
+    Optimization Patterns`"]
+    
+    %% Validation Logic
+    AuthSync --> AuthCheck{"`AuthSync Component?`"}
+    AuthCheck -->|Yes| AuthPass["`✅ Auth: 100/100`"]
+    AuthCheck -->|No| AuthFail["`❌ Auth: Failed`"]
+    
+    DataFlow --> ConvexCheck{"`Convex as Source of Truth?`"}
+    ConvexCheck -->|Yes| DataPass["`✅ Data Flow: 100/100`"]
+    ConvexCheck -->|No| DataFail["`❌ Data Flow: < 100`"]
+    
+    StateSep --> StateCheck{"`Business Data in useState?`"}
+    StateCheck -->|No| StatePass["`✅ State Clean`"]
+    StateCheck -->|Yes| StateFail["`❌ useState Violation`"]
+    
+    %% Results Compilation
+    AuthPass --> Results["`📊 **Results Compiler**
+    Architecture Scoring`"]
+    DataPass --> Results
+    StatePass --> Results
+    AuthFail --> Results
+    DataFail --> Results
+    StateFail --> Results
+    
+    %% Final Output
+    Results --> ScoreCalc{"`Overall Score Calculation`"}
+    ScoreCalc -->|100/100| Success["`🎉 **COMPREHENSIVE AUDIT PASSED!**
+    
+    📊 ARCHITECTURE SCORES:
+       🔐 Auth Sync: 100/100
+       🌊 Data Flow: 100/100
+       🎯 Overall: 100/100
+    
+    Files Audited: 32
+    Errors: 0
+    Warnings: 0`"]
+    
+    ScoreCalc -->|< 100| Failure["`🔴 **AUDIT FAILED**
+    Critical Issues Found
+    
+    📊 ARCHITECTURE SCORES:
+       🔐 Auth Sync: X/100  
+       🌊 Data Flow: Y/100
+       🎯 Overall: Z/100
+    
+    🚨 VIOLATIONS BY CATEGORY:
+       Detailed error locations`"]
+    
+    %% Styling
+    classDef startNode fill:#e1f5fe,stroke:#0277bd,stroke-width:3px
+    classDef auditNode fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef categoryNode fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef passNode fill:#c8e6c9,stroke:#4caf50,stroke-width:2px
+    classDef failNode fill:#ffcdd2,stroke:#f44336,stroke-width:2px
+    classDef successNode fill:#a5d6a7,stroke:#388e3c,stroke-width:3px
+    classDef failureNode fill:#ef9a9a,stroke:#d32f2f,stroke-width:3px
+    
+    class Start startNode
+    class Audit,Discovery auditNode
+    class AuthSync,DataFlow,StateSep,TypeSafety,Performance categoryNode
+    class AuthPass,DataPass,StatePass passNode
+    class AuthFail,DataFail,StateFail failNode
+    class Success successNode
+    class Failure failureNode

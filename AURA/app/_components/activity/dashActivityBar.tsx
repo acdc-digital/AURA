@@ -6,6 +6,7 @@
 import { Button } from "@/components/ui/button";
 import { useConvexAuth } from "convex/react";
 import { PanelType } from "@/lib/store";
+import { useEditorStore } from "@/lib/store";
 import { LucideIcon } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import {
@@ -28,6 +29,7 @@ interface ActivityBarProps {
 export function DashActivityBar({ activePanel, onPanelChange }: ActivityBarProps) {
   const { isAuthenticated } = useConvexAuth();
   const { user } = useUser();
+  const { openSpecialTab } = useEditorStore();
 
   const activityItems: Array<{ id: PanelType; icon: LucideIcon; label: string }> = [
     { id: "explorer", icon: FileText, label: "Explorer" },
@@ -45,6 +47,17 @@ export function DashActivityBar({ activePanel, onPanelChange }: ActivityBarProps
   ];
 
   const handleActivityClick = (id: PanelType) => {
+    // Handle explorer special case - open both sidebar and tab
+    if (id === 'explorer') {
+      openSpecialTab('file-explorer', 'File Explorer', 'file');
+    }
+    
+    // Handle calendar special case - open both sidebar and tab
+    if (id === 'calendar') {
+      openSpecialTab('calendar', 'Calendar', 'calendar');
+    }
+    
+    // Always set the active panel for sidebar
     onPanelChange(id);
   };
 

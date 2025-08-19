@@ -1,0 +1,30 @@
+flowchart LR
+    subgraph "`🎯 **State Test Core Concept**`"
+        Command(["`pnpm state`"]) --> Audit{"`State Auditor`"}
+        
+        Audit --> Auth["`🔐 Auth Sync
+        100/100`"]
+        Audit --> Data["`🌊 Data Flow  
+        100/100`"]
+        Audit --> State["`📊 State Sep
+        ✅ Clean`"]
+        
+        Auth --> Score{"`Overall Score`"}
+        Data --> Score
+        State --> Score
+        
+        Score -->|"`100/100`"| Success["`🎉 PASSED!`"]
+        Score -->|"`< 100`"| Fail["`❌ Failed`"]
+    end
+    
+    classDef cmdNode fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef auditNode fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    classDef categoryNode fill:#e8f5e8,stroke:#4caf50,stroke-width:2px
+    classDef successNode fill:#c8e6c9,stroke:#388e3c,stroke-width:3px
+    classDef failNode fill:#ffcdd2,stroke:#d32f2f,stroke-width:2px
+    
+    class Command cmdNode
+    class Audit auditNode
+    class Auth,Data,State categoryNode
+    class Success successNode
+    class Fail failNode

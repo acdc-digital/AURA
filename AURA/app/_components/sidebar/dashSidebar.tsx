@@ -1,11 +1,13 @@
 // Sidebar Component - Context-sensitive side panel for AURA dashboard
-// /Users/matthewsimon/Projects/AURA/AURA/app/_components/dashboard/dashSidebar.tsx
+// /Users/matthewsimon/Projects/AURA/AURA/app/_components/sidebar/dashSidebar.tsx
 
 "use client";
 
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { PanelType } from "@/lib/store";
 import { UserConsole } from "@/app/_components/activity/_components";
+import { FileExplorerPanel } from "@/app/_components/activity/_components/fileExplorer";
+import CalendarPanel from "@/app/_components/activity/_components/calendar/CalendarPanel";
 
 interface DashSidebarProps {
   activePanel: PanelType;
@@ -17,27 +19,36 @@ export function DashSidebar({ activePanel }: DashSidebarProps) {
   const renderPanelContent = () => {
     switch (activePanel) {
       case 'explorer':
-        return (
+        return isSignedIn ? (
+          <FileExplorerPanel />
+        ) : (
           <div className="p-4">
             <h3 className="text-[#cccccc] font-medium mb-4">EXPLORER</h3>
-            {isSignedIn ? (
-              <div className="text-[#858585] text-sm">
-                <div className="mb-2">📁 Welcome Project</div>
-                <div className="ml-4 text-xs">
-                  <div>📄 README.md</div>
-                  <div>📄 index.js</div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-[#858585] text-sm">
-                <p className="mb-4">Sign in to access your projects and files.</p>
-                <SignInButton mode="modal">
-                  <button className="bg-[#007acc] hover:bg-[#005a9e] text-white px-3 py-1.5 rounded text-xs transition-colors">
-                    Sign In
-                  </button>
-                </SignInButton>
-              </div>
-            )}
+            <div className="text-[#858585] text-sm">
+              <p className="mb-4">Sign in to access your projects and files.</p>
+              <SignInButton mode="modal">
+                <button className="bg-[#007acc] hover:bg-[#005a9e] text-white px-3 py-1.5 rounded text-xs transition-colors">
+                  Sign In
+                </button>
+              </SignInButton>
+            </div>
+          </div>
+        );
+      
+      case 'calendar':
+        return isSignedIn ? (
+          <CalendarPanel />
+        ) : (
+          <div className="p-4">
+            <h3 className="text-[#cccccc] font-medium mb-4">CALENDAR</h3>
+            <div className="text-[#858585] text-sm">
+              <p className="mb-4">Sign in to manage your social media posts.</p>
+              <SignInButton mode="modal">
+                <button className="bg-[#007acc] hover:bg-[#005a9e] text-white px-3 py-1.5 rounded text-xs transition-colors">
+                  Sign In
+                </button>
+              </SignInButton>
+            </div>
           </div>
         );
       

@@ -7,7 +7,7 @@ import { persist } from "zustand/middleware";
 interface Tab {
   id: string;
   title: string;
-  type: 'file' | 'welcome' | 'settings' | 'subscription' | 'user-profile';
+  type: 'file' | 'welcome' | 'settings' | 'subscription' | 'user-profile' | 'calendar';
   filePath?: string;
   isDirty: boolean;
   isPinned: boolean;
