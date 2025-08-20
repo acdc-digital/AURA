@@ -21,7 +21,7 @@ import {
   ChevronDown,
   ChevronRight
 } from "lucide-react";
-import { useSocialConnectionSync, type SocialPlatform } from "./resources/useSocialConnectionSync";
+import { useSocialConnectionSync, type SocialPlatform } from "./useSocialConnectionSync";
 
 // Platform configurations
 const platforms: SocialPlatform[] = ['facebook', 'instagram', 'twitter', 'reddit', 'linkedin', 'tiktok'];
