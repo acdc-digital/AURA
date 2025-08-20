@@ -48,7 +48,7 @@ class StateAuditor {
   private projectRoot: string;
 
   constructor() {
-    this.projectRoot = path.resolve(__dirname, '../../');
+    this.projectRoot = path.resolve(__dirname, '../../../');
   }
 
   /**
@@ -432,9 +432,28 @@ class StateAuditor {
   }
 
   private containsBusinessData(line: string): boolean {
+    // First check if it's clearly UI-only state
+    const uiOnlyPatterns = [
+      /\b(expanded|collapsed|visible|hidden|active|inactive|open|closed)\b/i,
+      /\b(loading|error|success|pending|submitted)\b/i,
+      /\b(form|input|field|validation|modal|dialog|dropdown)\b/i,
+      /\b(theme|dark|light|sidebar|panel|tab|section)\b/i,
+      /\buiState\b/i, /\bexpandedsections\b/i, /\bcollapsedstate\b/i,
+      /\bshow\w*/i, /\bhide\w*/i, /\btoggle\w*/i,
+      /\bselected\w*/i, /\bhovered\w*/i, /\bfocused\w*/i
+    ];
+    
+    // If it matches UI patterns, it's NOT business data
+    if (uiOnlyPatterns.some(pattern => pattern.test(line))) {
+      return false;
+    }
+    
+    // Now check for business data patterns
     const businessDataPatterns = [
-      /\bprojects?\b/i, /\busers?\b/i, /\bfiles?\b/i, /\bdocuments?\b/i, /\bentities\b/i, /\bmodels?\b/i, /\brecords?\b/i,
-      /\bprofile\b/i, /\baccount\b/i, /\bsettings\b/i, /\bpreferences\b/i, /\bdata\b/i
+      /\bprojects?\b/i, /\busers?\b/i, /\bfiles?\b/i, /\bdocuments?\b/i, 
+      /\bentities\b/i, /\bmodels?\b/i, /\brecords?\b/i,
+      /\bprofile\b/i, /\baccount\b/i, /\bsettings\b/i, /\bpreferences\b/i,
+      /\b(server|api|database)data\b/i // More specific data patterns
     ];
     return businessDataPatterns.some(pattern => pattern.test(line));
   }

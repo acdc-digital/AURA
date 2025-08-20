@@ -10,6 +10,7 @@ import { ExtensionsPanel } from "@/app/_components/activity/_components/extensio
 import { FileExplorerPanel } from "@/app/_components/activity/_components/fileExplorer";
 import CalendarPanel from "@/app/_components/activity/_components/calendar/CalendarPanel";
 import { DashSocialConnections } from "@/app/_components/activity/_components/connections/DashSocialConnections";
+import { DashDebug } from "@/app/_components/activity/_components/debug/DashDebug";
 
 interface DashSidebarProps {
   activePanel: PanelType;
@@ -109,15 +110,18 @@ export function DashSidebar({ activePanel }: DashSidebarProps) {
         );
       
       case 'debug':
-        return (
+        return isSignedIn ? (
+          <DashDebug />
+        ) : (
           <div className="p-4">
-            <h3 className="text-[#cccccc] font-medium mb-4">RUN & DEBUG</h3>
+            <h3 className="text-[#cccccc] font-medium mb-4">DEBUG CONSOLE</h3>
             <div className="text-[#858585] text-sm">
-              {isSignedIn ? (
-                <p>No configurations available.</p>
-              ) : (
-                <p>Sign in to access debugging tools.</p>
-              )}
+              <p className="mb-4">Sign in to access advanced debugging tools.</p>
+              <SignInButton mode="modal">
+                <button className="bg-[#007acc] hover:bg-[#005a9e] text-white px-3 py-1.5 rounded text-xs transition-colors">
+                  Sign In
+                </button>
+              </SignInButton>
             </div>
           </div>
         );

@@ -57,7 +57,7 @@ export function DashSocialConnections() {
     deleteConnection
   } = useSocialConnectionSync();
 
-  // UI-only state for expansion and form handling
+  // UI-only state for expansion and form handling - NOT business data
   const [expandedSections, setExpandedSections] = useState<Record<SocialPlatform, boolean>>({
     facebook: false,
     instagram: false,

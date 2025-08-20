@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3333",
     "convex": "convex dev",
-    "state": "npx tsx app/tests/state-audit.ts",
+    "state": "npx tsx app/tests/state/state-audit.ts",
     "structure": "npx tsx app/tests/structure/structure.ts",
     "build": "next build",
     "start": "next start",

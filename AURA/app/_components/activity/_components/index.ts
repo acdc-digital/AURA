@@ -4,3 +4,4 @@
 export { UserConsole } from './userProfle/userConsole';
 export { AgentsPanel } from './agents';
 export { DashTrash } from './trash';
+export { DashDebug } from './debug/DashDebug';
