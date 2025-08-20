@@ -5,8 +5,16 @@ export { useUser } from './useUser';
 export { useFiles } from './useFiles';
 export { useProjects } from './useProjects';
 export { useCalendarPosts } from './useCalendarPosts';
+export { useTrash } from './useTrash';
 
 // Export types
 export type { UseUserReturn, UserProfileUpdateData } from './useUser';
 export type { UseFilesReturn, FileData, CreateFileData, UpdateFileData } from './useFiles';
 export type { UseProjectsReturn, ProjectData, CreateProjectData, UpdateProjectData } from './useProjects';
+export type { 
+  UseTrashReturn, 
+  DeletedFileData, 
+  DeletedProjectData, 
+  TrashItem, 
+  TrashStats 
+} from './useTrash';

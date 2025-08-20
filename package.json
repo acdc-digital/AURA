@@ -7,6 +7,7 @@
     "dev": "cd AURA && pnpm dev",
     "convex": "cd AURA && pnpm convex",
     "state": "cd AURA && pnpm state",
+    "structure": "cd AURA && pnpm structure",
     "build": "pnpm --recursive run build",
     "install:all": "pnpm install",
     "clean": "pnpm --parallel --recursive run clean",

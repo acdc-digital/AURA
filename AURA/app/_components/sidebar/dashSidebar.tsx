@@ -5,7 +5,7 @@
 
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { PanelType } from "@/lib/store";
-import { UserConsole, AgentsPanel } from "@/app/_components/activity/_components";
+import { UserConsole, AgentsPanel, DashTrash } from "@/app/_components/activity/_components";
 import { ExtensionsPanel } from "@/app/_components/activity/_components/extensions";
 import { FileExplorerPanel } from "@/app/_components/activity/_components/fileExplorer";
 import CalendarPanel from "@/app/_components/activity/_components/calendar/CalendarPanel";
@@ -124,6 +124,23 @@ export function DashSidebar({ activePanel }: DashSidebarProps) {
       
       case 'extensions':
         return <ExtensionsPanel />;
+      
+      case 'trash':
+        return isSignedIn ? (
+          <DashTrash />
+        ) : (
+          <div className="p-4">
+            <h3 className="text-[#cccccc] font-medium mb-4">TRASH</h3>
+            <div className="text-[#858585] text-sm">
+              <p className="mb-4">Sign in to access trash management.</p>
+              <SignInButton mode="modal">
+                <button className="bg-[#007acc] hover:bg-[#005a9e] text-white px-3 py-1.5 rounded text-xs transition-colors">
+                  Sign In
+                </button>
+              </SignInButton>
+            </div>
+          </div>
+        );
       
       case 'account':
         return <UserConsole />;

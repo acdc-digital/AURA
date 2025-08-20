@@ -17,7 +17,6 @@ import {
     FileText,
     Puzzle,
     Settings,
-    Terminal,
     Trash2,
     User
 } from "lucide-react";
@@ -38,7 +37,6 @@ export function DashActivityBar({ activePanel, onPanelChange }: ActivityBarProps
     { id: "social-connectors", icon: Contact, label: "Social Media Connectors" },
     { id: "agents", icon: Bot, label: "Agents" },
     { id: "extensions", icon: Puzzle, label: "Extensions" },
-    { id: "terminal", icon: Terminal, label: "Terminal" },
     { id: "trash", icon: Trash2, label: "Trash" },
     { id: "debug", icon: Bug, label: "Debug Tools" },
   ];

@@ -1,0 +1,47 @@
+graph TB
+    subgraph "Presentation Layer"
+        A[App Router Pages]
+        B[React Components]
+        C[UI Components]
+    end
+    
+    subgraph "Business Logic Layer"
+        D[Custom Hooks]
+        E[Agents System]
+        F[Store Management]
+    end
+    
+    subgraph "Data Access Layer"
+        G[Convex Queries]
+        H[Convex Mutations]
+        I[Authentication]
+    end
+    
+    subgraph "Infrastructure Layer"
+        J[Convex Database]
+        K[Clerk Auth]
+        L[External APIs]
+    end
+    
+    A --> B
+    B --> C
+    B --> D
+    D --> G
+    D --> H
+    E --> G
+    E --> H
+    F --> D
+    G --> J
+    H --> J
+    I --> K
+    E --> L
+    
+    classDef presentation fill:#e1f5fe
+    classDef business fill:#f3e5f5
+    classDef data fill:#e8f5e8
+    classDef infrastructure fill:#fff3e0
+    
+    class A,B,C presentation
+    class D,E,F business
+    class G,H,I data
+    class J,K,L infrastructure

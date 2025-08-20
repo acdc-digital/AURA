@@ -12,6 +12,7 @@ import {
   FileType,
   MessageSquare,
   File,
+  X
 } from "lucide-react";
 import { useState } from "react";
 
@@ -22,7 +23,7 @@ interface FileTreeItemProps {
   onRename?: (newName: string) => void;
 }
 
-export function FileTreeItem({ file, onOpen, onRename }: FileTreeItemProps) {
+export function FileTreeItem({ file, onOpen, onDelete, onRename }: FileTreeItemProps) {
   // Ephemeral UI state for inline renaming - not business data
   const [isRenaming, setIsRenaming] = useState(false);
   const [tempRenameValue, setTempRenameValue] = useState('');
@@ -145,9 +146,20 @@ export function FileTreeItem({ file, onOpen, onRename }: FileTreeItemProps) {
       <span className="text-sm truncate flex-1">{file.name}</span>
       {getStatusBadge()}
       
-      {/* Context menu trigger - could be expanded later */}
+      {/* Delete button - shows on hover */}
       <div className="opacity-0 group-hover:opacity-100 transition-opacity ml-1">
-        {/* Add context menu button here if needed */}
+        {onDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-1 hover:bg-[#3c3c3c] rounded transition-colors"
+            title="Delete file"
+          >
+            <X className="w-3 h-3 text-[#858585] hover:text-[#ff6b6b] transition-colors" />
+          </button>
+        )}
       </div>
     </div>
   );
