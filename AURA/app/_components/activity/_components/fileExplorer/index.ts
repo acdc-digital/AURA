@@ -4,3 +4,4 @@
 export { FileExplorerPanel } from './FileExplorerPanel';
 export { FileExplorerTab } from './FileExplorerTab';
 export { FileTreeItem } from './FileTreeItem';
+export { FileContextMenu } from './FileContextMenu';

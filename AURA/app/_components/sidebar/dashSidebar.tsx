@@ -9,7 +9,7 @@ import { UserConsole, AgentsPanel, DashTrash } from "@/app/_components/activity/
 import { ExtensionsPanel } from "@/app/_components/activity/_components/extensions";
 import { FileExplorerPanel } from "@/app/_components/activity/_components/fileExplorer";
 import CalendarPanel from "@/app/_components/activity/_components/calendar/CalendarPanel";
-import { DashSocialConnections } from "@/app/_components/activity/_components/connections/DashSocialConnections";
+import SocialConnectorsPanel from "@/app/_components/activity/_components/socialConnectors/SocialConnectorsPanel";
 import { DashDebug } from "@/app/_components/activity/_components/debug/DashDebug";
 
 interface DashSidebarProps {
@@ -56,7 +56,21 @@ export function DashSidebar({ activePanel }: DashSidebarProps) {
         );
       
       case 'social-connectors':
-        return <DashSocialConnections />;
+        return isSignedIn ? (
+          <SocialConnectorsPanel />
+        ) : (
+          <div className="p-4">
+            <h3 className="text-[#cccccc] font-medium mb-4">SOCIAL CONNECTORS</h3>
+            <div className="text-[#858585] text-sm">
+              <p className="mb-4">Sign in to manage your social media connections.</p>
+              <SignInButton mode="modal">
+                <button className="bg-[#007acc] hover:bg-[#005a9e] text-white px-3 py-1.5 rounded text-xs transition-colors">
+                  Sign In
+                </button>
+              </SignInButton>
+            </div>
+          </div>
+        );
       
       case 'agents':
         return isSignedIn ? (
@@ -161,7 +175,7 @@ export function DashSidebar({ activePanel }: DashSidebarProps) {
   };
 
   return (
-    <div className="w-60 min-w-60 max-w-60 bg-[#252526] border-r border-[#454545] flex flex-col">
+    <div className="w-60 min-w-60 max-w-60 bg-[#252526] border-r border-[#2d2d2d] flex flex-col">
       {renderPanelContent()}
     </div>
   );

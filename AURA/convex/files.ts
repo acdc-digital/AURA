@@ -25,7 +25,7 @@ export const list = query({
     return await ctx.db
       .query("files")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .filter((q) => q.eq(q.field("isDeleted"), undefined))
+      .filter((q) => q.neq(q.field("isDeleted"), true))
       .order("desc")
       .collect();
   },
@@ -59,7 +59,7 @@ export const getByProject = query({
     return await ctx.db
       .query("files")
       .withIndex("by_project", (q) => q.eq("projectId", projectId))
-      .filter((q) => q.eq(q.field("isDeleted"), undefined))
+      .filter((q) => q.neq(q.field("isDeleted"), true))
       .order("desc")
       .collect();
   },

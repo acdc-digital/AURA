@@ -1,564 +1,466 @@
-// STATE AUDIT - Comprehensive validation for Clerk/Convex/Next.js architecture
-// /Users/matthewsimon/Projects/AURA/AURA/app/tests/state-audit.ts
+// STATE AUDIT - Comprehensive audit tool for AURA application state management
+// /Users/matthewsimon/Projects/AURA/AURA/app/tests/state/state-audit.ts
 
-import fs from 'fs';
-import path from 'path';
+import { readFileSync, existsSync, readdirSync } from 'fs';
+import { join } from 'path';
+import { glob } from 'glob';
 
-interface StateViolation {
-  file: string;
-  line: number;
-  violation: string;
-  severity: 'error' | 'warning';
-  principle: string;
-  category: 'state-separation' | 'auth-sync' | 'data-flow' | 'type-safety' | 'performance';
+interface StateStore {
+  name: string;
+  path: string;
+  exports: string[];
+  hooks: string[];
+  types: string[];
+  issues: string[];
 }
 
-interface AuthSyncAuditResult {
-  hasAuthSync: boolean;
-  isInLayout: boolean;
-  hasUserHook: boolean;
-  hasConvexIntegration: boolean;
+interface Hook {
+  name: string;
+  path: string;
+  dependencies: string[];
+  returnType: string | null;
+  issues: string[];
 }
 
-interface DataFlowAuditResult {
-  convexAsSourceOfTruth: boolean;
-  zustandForUIOnly: boolean;
-  customHooksPattern: boolean;
-  noDirectConvexInComponents: boolean;
+interface ConvexFunction {
+  name: string;
+  type: 'query' | 'mutation' | 'action';
+  path: string;
+  issues: string[];
 }
 
-interface AuditResult {
-  passed: boolean;
-  violations: StateViolation[];
-  authSyncAudit: AuthSyncAuditResult;
-  dataFlowAudit: DataFlowAuditResult;
+interface AuditResults {
+  stores: StateStore[];
+  hooks: Hook[];
+  convexFunctions: ConvexFunction[];
   summary: {
-    totalFiles: number;
-    violationsCount: number;
-    errorsCount: number;
-    warningsCount: number;
-    authSyncScore: number;
-    dataFlowScore: number;
-    overallScore: number;
+    totalStores: number;
+    totalHooks: number;
+    totalConvexFunctions: number;
+    totalIssues: number;
   };
+  recommendations: string[];
 }
 
 class StateAuditor {
-  private violations: StateViolation[] = [];
-  private projectRoot: string;
+  private rootPath: string;
 
-  constructor() {
-    this.projectRoot = path.resolve(__dirname, '../../../');
+  constructor(rootPath: string) {
+    this.rootPath = rootPath;
   }
 
-  /**
-   * ENHANCED AURA STATE MANAGEMENT AUDIT:
-   * 
-   * CATEGORY 1: State Separation
-   * - Server State (Convex) = Source of Truth
-   * - Client State (Zustand) = UI-only concerns
-   * - Component State (useState) = Ephemeral only
-   * 
-   * CATEGORY 2: Authentication Synchronization  
-   * - Clerk ↔ Convex sync via AuthSync component
-   * - Proper user creation flow
-   * - No authentication conflicts
-   * 
-   * CATEGORY 3: Data Flow Architecture
-   * - Custom hooks bridge Convex and components
-   * - Conditional queries prevent auth errors
-   * - Real-time subscriptions properly handled
-   * 
-   * CATEGORY 4: Type Safety
-   * - Proper TypeScript integration
-   * - No 'any' types in critical paths
-   * - Convex schema consistency
-   * 
-   * CATEGORY 5: Performance
-   * - No unnecessary re-renders
-   * - Proper query optimization
-   * - Efficient state updates
-   */
-  async auditCompleteArchitecture(): Promise<AuditResult> {
-    this.violations = [];
-    
-    console.log('🔍 Starting Enhanced State Management Audit...\n');
+  async audit(): Promise<AuditResults> {
+    console.log('🔍 Starting AURA State Management Audit...\n');
 
-    const componentFiles = await this.getComponentFiles();
-    const storeFiles = await this.getStoreFiles();
-    const hookFiles = await this.getHookFiles();
-    const convexFiles = await this.getConvexFiles();
-
-    console.log(`📁 Found ${componentFiles.length} component files`);
-    console.log(`🏪 Found ${storeFiles.length} store files`);
-    console.log(`🪝 Found ${hookFiles.length} hook files`);
-    console.log(`🗄️ Found ${convexFiles.length} Convex files\n`);
-
-    // Enhanced audits
-    const authSyncAudit = await this.auditAuthSynchronization();
-    const dataFlowAudit = await this.auditDataFlowArchitecture(componentFiles, hookFiles);
-    
-    // Original audits
-    await this.auditStateSeparation(componentFiles);
-    await this.auditTypeSafety([...componentFiles, ...hookFiles, ...convexFiles]);
-    await this.auditPerformance(componentFiles, hookFiles);
-
-    const authSyncScore = this.calculateAuthSyncScore(authSyncAudit);
-    const dataFlowScore = this.calculateDataFlowScore(dataFlowAudit);
-    const overallScore = (authSyncScore + dataFlowScore) / 2;
-
-    const result: AuditResult = {
-      passed: this.violations.filter(v => v.severity === 'error').length === 0,
-      violations: this.violations,
-      authSyncAudit,
-      dataFlowAudit,
+    const results: AuditResults = {
+      stores: [],
+      hooks: [],
+      convexFunctions: [],
       summary: {
-        totalFiles: componentFiles.length + storeFiles.length + hookFiles.length + convexFiles.length,
-        violationsCount: this.violations.length,
-        errorsCount: this.violations.filter(v => v.severity === 'error').length,
-        warningsCount: this.violations.filter(v => v.severity === 'warning').length,
-        authSyncScore,
-        dataFlowScore,
-        overallScore,
-      }
+        totalStores: 0,
+        totalHooks: 0,
+        totalConvexFunctions: 0,
+        totalIssues: 0
+      },
+      recommendations: []
     };
 
-    this.printEnhancedResults(result);
-    return result;
+    try {
+      // Audit Zustand stores
+      results.stores = await this.auditStores();
+      
+      // Audit custom hooks
+      results.hooks = await this.auditHooks();
+      
+      // Audit Convex functions
+      results.convexFunctions = await this.auditConvexFunctions();
+      
+      // Generate summary
+      results.summary = this.generateSummary(results);
+      
+      // Generate recommendations
+      results.recommendations = this.generateRecommendations(results);
+      
+    } catch (error) {
+      console.error('❌ Audit failed:', error);
+      throw error;
+    }
+
+    return results;
   }
 
-  private async auditAuthSynchronization(): Promise<AuthSyncAuditResult> {
-    console.log('🔐 Auditing Authentication Synchronization...');
+  private async auditStores(): Promise<StateStore[]> {
+    console.log('📦 Auditing Zustand stores...');
+    const stores: StateStore[] = [];
     
-    // Check if AuthSync component exists
-    const authSyncPath = path.join(this.projectRoot, 'app/_components/auth/AuthSync.tsx');
-    const hasAuthSync = fs.existsSync(authSyncPath);
-    
-    if (!hasAuthSync) {
-      this.violations.push({
-        file: 'app/_components/auth/AuthSync.tsx',
-        line: 1,
-        violation: 'Missing AuthSync component for Clerk/Convex synchronization',
-        severity: 'error',
-        principle: 'Authentication Synchronization',
-        category: 'auth-sync'
-      });
-    }
-
-    // Check if AuthSync is in layout
-    const layoutPath = path.join(this.projectRoot, 'app/layout.tsx');
-    let isInLayout = false;
-    
-    if (fs.existsSync(layoutPath)) {
-      const layoutContent = await fs.promises.readFile(layoutPath, 'utf-8');
-      isInLayout = layoutContent.includes('AuthSync') || layoutContent.includes('<AuthSync');
+    try {
+      const storeFiles = await glob('lib/store/*.ts', { cwd: this.rootPath });
       
-      if (!isInLayout) {
-        this.violations.push({
-          file: 'app/layout.tsx',
-          line: 1,
-          violation: 'AuthSync component not included in root layout',
-          severity: 'error',
-          principle: 'Authentication Synchronization',
-          category: 'auth-sync'
-        });
+      for (const filePath of storeFiles) {
+        if (filePath.endsWith('index.ts')) continue;
+        
+        const fullPath = join(this.rootPath, filePath);
+        const content = readFileSync(fullPath, 'utf-8');
+        
+        const store: StateStore = {
+          name: filePath.replace('lib/store/', '').replace('.ts', ''),
+          path: filePath,
+          exports: this.extractExports(content),
+          hooks: this.extractHooks(content),
+          types: this.extractTypes(content),
+          issues: []
+        };
+        
+        // Check for common issues
+        store.issues = this.validateStore(content, store.name);
+        
+        stores.push(store);
       }
+    } catch (error) {
+      console.warn('⚠️  Could not find store files:', error);
     }
-
-    // Check if useUser hook exists and properly integrates Clerk + Convex
-    const useUserPath = path.join(this.projectRoot, 'lib/hooks/useUser.ts');
-    let hasUserHook = false;
-    let hasConvexIntegration = false;
     
-    if (fs.existsSync(useUserPath)) {
-      hasUserHook = true;
-      const hookContent = await fs.promises.readFile(useUserPath, 'utf-8');
-      
-      const hasClerkImport = hookContent.includes('@clerk/nextjs');
-      const hasConvexImport = hookContent.includes('convex/react');
-      const hasBridgeLogic = hookContent.includes('clerkUser') && hookContent.includes('getCurrentUser');
-      
-      hasConvexIntegration = hasClerkImport && hasConvexImport && hasBridgeLogic;
-      
-      if (!hasConvexIntegration) {
-        this.violations.push({
-          file: 'lib/hooks/useUser.ts',
-          line: 1,
-          violation: 'useUser hook does not properly bridge Clerk and Convex',
-          severity: 'error',
-          principle: 'Authentication Synchronization',
-          category: 'auth-sync'
-        });
-      }
-
-      // Check for conditional queries to prevent auth errors
-      if (!hookContent.includes('"skip"')) {
-        this.violations.push({
-          file: 'lib/hooks/useUser.ts',
-          line: 1,
-          violation: 'Missing conditional queries to prevent authentication errors',
-          severity: 'warning',
-          principle: 'Authentication Synchronization',
-          category: 'auth-sync'
-        });
-      }
-    } else {
-      this.violations.push({
-        file: 'lib/hooks/useUser.ts',
-        line: 1,
-        violation: 'Missing useUser hook for Clerk/Convex integration',
-        severity: 'error',
-        principle: 'Authentication Synchronization',
-        category: 'auth-sync'
-      });
-    }
-
-    return { hasAuthSync, isInLayout, hasUserHook, hasConvexIntegration };
+    console.log(`   Found ${stores.length} store(s)`);
+    return stores;
   }
 
-  private async auditDataFlowArchitecture(componentFiles: string[], _hookFiles: string[]): Promise<DataFlowAuditResult> {
-    console.log('🌊 Auditing Data Flow Architecture...');
+  private async auditHooks(): Promise<Hook[]> {
+    console.log('🎣 Auditing custom hooks...');
+    const hooks: Hook[] = [];
     
-    let convexAsSourceOfTruth = true;
-    let zustandForUIOnly = true;
-    const customHooksPattern = true;
-    let noDirectConvexInComponents = true;
-
-    // Check components for direct Convex usage
-    for (const filePath of componentFiles) {
-      const content = await fs.promises.readFile(filePath, 'utf-8');
-      const relativePath = path.relative(this.projectRoot, filePath);
+    try {
+      const hookFiles = await glob('lib/hooks/*.ts', { cwd: this.rootPath });
       
-      // Allow UserProfile and AuthSync to have direct Convex calls
-      if (relativePath.includes('UserProfile.tsx') || relativePath.includes('AuthSync.tsx')) {
-        continue;
+      for (const filePath of hookFiles) {
+        if (filePath.endsWith('index.ts')) continue;
+        
+        const fullPath = join(this.rootPath, filePath);
+        const content = readFileSync(fullPath, 'utf-8');
+        
+        const hook: Hook = {
+          name: filePath.replace('lib/hooks/', '').replace('.ts', ''),
+          path: filePath,
+          dependencies: this.extractDependencies(content),
+          returnType: this.extractReturnType(content),
+          issues: []
+        };
+        
+        // Check for common issues
+        hook.issues = this.validateHook(content, hook.name);
+        
+        hooks.push(hook);
       }
+    } catch (error) {
+      console.warn('⚠️  Could not find hook files:', error);
+    }
+    
+    console.log(`   Found ${hooks.length} hook(s)`);
+    return hooks;
+  }
+
+  private async auditConvexFunctions(): Promise<ConvexFunction[]> {
+    console.log('🗄️  Auditing Convex functions...');
+    const functions: ConvexFunction[] = [];
+    
+    try {
+      const convexFiles = await glob('convex/*.ts', { cwd: this.rootPath });
       
-      const directConvexCalls = (content.match(/useQuery\(api\./g) || []).length +
-                               (content.match(/useMutation\(api\./g) || []).length;
-      
-      if (directConvexCalls > 0) {
-        noDirectConvexInComponents = false;
-        this.violations.push({
-          file: relativePath,
-          line: 1,
-          violation: `Component has ${directConvexCalls} direct Convex calls. Use custom hooks instead.`,
-          severity: 'warning',
-          principle: 'Custom Hooks Pattern',
-          category: 'data-flow'
+      for (const filePath of convexFiles) {
+        if (filePath.includes('_generated') || filePath.endsWith('config.ts') || filePath.endsWith('schema.ts')) continue;
+        
+        const fullPath = join(this.rootPath, filePath);
+        const content = readFileSync(fullPath, 'utf-8');
+        
+        const fileFunctions = this.extractConvexFunctions(content, filePath);
+        functions.push(...fileFunctions);
+      }
+    } catch (error) {
+      console.warn('⚠️  Could not find Convex files:', error);
+    }
+    
+    console.log(`   Found ${functions.length} Convex function(s)`);
+    return functions;
+  }
+
+  private extractExports(content: string): string[] {
+    const exportMatches = content.match(/export\s+(?:const|function|class|interface|type)\s+(\w+)/g) || [];
+    return exportMatches.map(match => match.split(/\s+/).pop() || '');
+  }
+
+  private extractHooks(content: string): string[] {
+    const hookMatches = content.match(/use\w+/g) || [];
+    return [...new Set(hookMatches)];
+  }
+
+  private extractTypes(content: string): string[] {
+    const typeMatches = content.match(/(?:interface|type)\s+(\w+)/g) || [];
+    return typeMatches.map(match => match.split(/\s+/)[1]);
+  }
+
+  private extractDependencies(content: string): string[] {
+    const importMatches = content.match(/import\s+.*?from\s+['"]([^'"]+)['"]/g) || [];
+    return importMatches.map(match => {
+      const moduleMatch = match.match(/from\s+['"]([^'"]+)['"]/);
+      return moduleMatch ? moduleMatch[1] : '';
+    }).filter(Boolean);
+  }
+
+  private extractReturnType(content: string): string | null {
+    const returnTypeMatch = content.match(/export\s+function\s+use\w+\([^)]*\):\s*([^{]+)/);
+    return returnTypeMatch ? returnTypeMatch[1].trim() : null;
+  }
+
+  private extractConvexFunctions(content: string, filePath: string): ConvexFunction[] {
+    const functions: ConvexFunction[] = [];
+    
+    // Match query, mutation, and action exports
+    const queryMatches = content.match(/export\s+const\s+(\w+)\s*=\s*query/g) || [];
+    const mutationMatches = content.match(/export\s+const\s+(\w+)\s*=\s*mutation/g) || [];
+    const actionMatches = content.match(/export\s+const\s+(\w+)\s*=\s*action/g) || [];
+    
+    queryMatches.forEach(match => {
+      const name = match.match(/const\s+(\w+)/)?.[1];
+      if (name) {
+        functions.push({
+          name,
+          type: 'query',
+          path: filePath,
+          issues: this.validateConvexFunction(content, name, 'query')
         });
       }
+    });
+    
+    mutationMatches.forEach(match => {
+      const name = match.match(/const\s+(\w+)/)?.[1];
+      if (name) {
+        functions.push({
+          name,
+          type: 'mutation',
+          path: filePath,
+          issues: this.validateConvexFunction(content, name, 'mutation')
+        });
+      }
+    });
+    
+    actionMatches.forEach(match => {
+      const name = match.match(/const\s+(\w+)/)?.[1];
+      if (name) {
+        functions.push({
+          name,
+          type: 'action',
+          path: filePath,
+          issues: this.validateConvexFunction(content, name, 'action')
+        });
+      }
+    });
+    
+    return functions;
+  }
 
-      // Check for business data in useState
-      const lines = content.split('\n');
-      lines.forEach((line, index) => {
-        if (line.includes('useState') && this.containsBusinessData(line)) {
-          convexAsSourceOfTruth = false;
-          this.violations.push({
-            file: relativePath,
-            line: index + 1,
-            violation: 'Business data in useState. Use Convex for persistent data.',
-            severity: 'error',
-            principle: 'Server State = Source of Truth',
-            category: 'state-separation'
+  private validateStore(content: string, storeName: string): string[] {
+    const issues: string[] = [];
+    
+    // Check if store uses create from zustand
+    if (!content.includes('create(')) {
+      issues.push('Does not use zustand create pattern');
+    }
+    
+    // Check if store has proper TypeScript interface
+    if (!content.includes('interface') && !content.includes('type')) {
+      issues.push('Missing TypeScript interface/type definition');
+    }
+    
+    // Check for business data (should be in Convex, not Zustand)
+    const businessDataPatterns = ['users', 'projects', 'files', 'posts', 'data'];
+    businessDataPatterns.forEach(pattern => {
+      if (content.includes(pattern) && !storeName.includes('ui') && !storeName.includes('editor') && !storeName.includes('sidebar')) {
+        issues.push(`May contain business data (${pattern}) - should use Convex instead`);
+      }
+    });
+    
+    return issues;
+  }
+
+  private validateHook(content: string, hookName: string): string[] {
+    const issues: string[] = [];
+    
+    // Check if hook uses Convex properly
+    if (content.includes('useQuery') && !content.includes('api.')) {
+      issues.push('Uses useQuery but missing proper API import');
+    }
+    
+    // Check if hook has proper error handling
+    if ((content.includes('useQuery') || content.includes('useMutation')) && !content.includes('try') && !content.includes('catch')) {
+      issues.push('Missing error handling for Convex operations');
+    }
+    
+    // Check if hook has proper TypeScript return type
+    if (!content.includes('export function') || !content.includes(':')) {
+      issues.push('Missing explicit TypeScript return type');
+    }
+    
+    return issues;
+  }
+
+  private validateConvexFunction(content: string, functionName: string, type: string): string[] {
+    const issues: string[] = [];
+    
+    // Check if function has proper argument validation
+    if (!content.includes('v.') && type !== 'action') {
+      issues.push('Missing Convex validator for arguments');
+    }
+    
+    // Check if function has proper error handling
+    if (!content.includes('ConvexError') && (content.includes('throw') || content.includes('error'))) {
+      issues.push('Should use ConvexError for application errors');
+    }
+    
+    return issues;
+  }
+
+  private generateSummary(results: AuditResults) {
+    const totalIssues = results.stores.reduce((sum, store) => sum + store.issues.length, 0) +
+                       results.hooks.reduce((sum, hook) => sum + hook.issues.length, 0) +
+                       results.convexFunctions.reduce((sum, fn) => sum + fn.issues.length, 0);
+
+    return {
+      totalStores: results.stores.length,
+      totalHooks: results.hooks.length,
+      totalConvexFunctions: results.convexFunctions.length,
+      totalIssues
+    };
+  }
+
+  private generateRecommendations(results: AuditResults): string[] {
+    const recommendations: string[] = [];
+    
+    // Check for missing core hooks
+    const coreHookNames = ['useUser', 'useProjects', 'useFiles'];
+    const existingHookNames = results.hooks.map(h => h.name);
+    
+    coreHookNames.forEach(hookName => {
+      if (!existingHookNames.includes(hookName)) {
+        recommendations.push(`Consider implementing ${hookName} hook for better data management`);
+      }
+    });
+    
+    // Check for state management separation
+    const uiStoreCount = results.stores.filter(s => s.name.includes('ui') || s.name.includes('editor') || s.name.includes('sidebar')).length;
+    const totalStoreCount = results.stores.length;
+    
+    if (uiStoreCount < totalStoreCount / 2) {
+      recommendations.push('Consider separating UI state from business logic using dedicated UI stores');
+    }
+    
+    // Check for proper error handling
+    const hooksWithoutErrorHandling = results.hooks.filter(h => h.issues.some(i => i.includes('error handling')));
+    if (hooksWithoutErrorHandling.length > 0) {
+      recommendations.push('Implement comprehensive error handling in Convex-related hooks');
+    }
+    
+    return recommendations;
+  }
+
+  printResults(results: AuditResults): void {
+    console.log('\n📊 AURA State Management Audit Results\n');
+    console.log('=' .repeat(50));
+    
+    // Summary
+    console.log('\n📈 Summary:');
+    console.log(`   Zustand Stores: ${results.summary.totalStores}`);
+    console.log(`   Custom Hooks: ${results.summary.totalHooks}`);
+    console.log(`   Convex Functions: ${results.summary.totalConvexFunctions}`);
+    console.log(`   Total Issues: ${results.summary.totalIssues}`);
+    
+    // Store details
+    if (results.stores.length > 0) {
+      console.log('\n📦 Zustand Stores:');
+      results.stores.forEach(store => {
+        console.log(`   ${store.name} (${store.exports.length} exports)`);
+        if (store.issues.length > 0) {
+          store.issues.forEach(issue => {
+            console.log(`      ⚠️  ${issue}`);
           });
         }
       });
     }
-
-    // Check Zustand stores for business data
-    const storeFiles = await this.getStoreFiles();
-    for (const filePath of storeFiles) {
-      const content = await fs.promises.readFile(filePath, 'utf-8');
-      const relativePath = path.relative(this.projectRoot, filePath);
-      
-      if (this.containsBusinessDataInStore(content)) {
-        zustandForUIOnly = false;
-        this.violations.push({
-          file: relativePath,
-          line: 1,
-          violation: 'Zustand store contains business data. Use only for UI state.',
-          severity: 'error',
-          principle: 'Client State = UI Only',
-          category: 'state-separation'
-        });
-      }
-    }
-
-    return { convexAsSourceOfTruth, zustandForUIOnly, customHooksPattern, noDirectConvexInComponents };
-  }
-
-  private async auditStateSeparation(componentFiles: string[]): Promise<void> {
-    console.log('📊 Auditing State Separation...');
     
-    // This is covered in auditDataFlowArchitecture but we can add more specific checks here
-    for (const filePath of componentFiles) {
-      const content = await fs.promises.readFile(filePath, 'utf-8');
-      const relativePath = path.relative(this.projectRoot, filePath);
-      
-      // Check for mixing of concerns
-      if (content.includes('useQuery') && content.includes('useState') && this.containsBusinessData(content)) {
-        this.violations.push({
-          file: relativePath,
-          line: 1,
-          violation: 'Component mixes server state (Convex) with local state (useState) for business data',
-          severity: 'warning',
-          principle: 'State Separation',
-          category: 'state-separation'
-        });
-      }
-    }
-  }
-
-  private async auditTypeSafety(allFiles: string[]): Promise<void> {
-    console.log('🔒 Auditing Type Safety...');
-    
-    for (const filePath of allFiles) {
-      const content = await fs.promises.readFile(filePath, 'utf-8');
-      const relativePath = path.relative(this.projectRoot, filePath);
-      const lines = content.split('\n');
-      
-      lines.forEach((line, index) => {
-        // Check for 'any' types in critical paths
-        if (line.includes(': any') && !line.includes('// @ts-ignore') && !line.includes('TODO')) {
-          this.violations.push({
-            file: relativePath,
-            line: index + 1,
-            violation: 'Use of "any" type reduces type safety',
-            severity: 'warning',
-            principle: 'Type Safety',
-            category: 'type-safety'
-          });
-        }
-
-        // Check for proper Convex ID types
-        if (line.includes('Id<') && !line.includes('import')) {
-          // This is good - using proper Convex ID types
-        } else if (line.includes('userId') && line.includes('string') && !relativePath.includes('schema.ts')) {
-          this.violations.push({
-            file: relativePath,
-            line: index + 1,
-            violation: 'Consider using Convex Id<"users"> instead of string for user IDs',
-            severity: 'warning',
-            principle: 'Type Safety',
-            category: 'type-safety'
+    // Hook details
+    if (results.hooks.length > 0) {
+      console.log('\n🎣 Custom Hooks:');
+      results.hooks.forEach(hook => {
+        console.log(`   ${hook.name} (${hook.dependencies.length} dependencies)`);
+        if (hook.issues.length > 0) {
+          hook.issues.forEach(issue => {
+            console.log(`      ⚠️  ${issue}`);
           });
         }
       });
     }
-  }
-
-  private async auditPerformance(componentFiles: string[], hookFiles: string[]): Promise<void> {
-    console.log('⚡ Auditing Performance...');
     
-    for (const filePath of [...componentFiles, ...hookFiles]) {
-      const content = await fs.promises.readFile(filePath, 'utf-8');
-      const relativePath = path.relative(this.projectRoot, filePath);
+    // Convex function details
+    if (results.convexFunctions.length > 0) {
+      console.log('\n🗄️  Convex Functions:');
+      const groupedFunctions = results.convexFunctions.reduce((acc, fn) => {
+        if (!acc[fn.path]) acc[fn.path] = [];
+        acc[fn.path].push(fn);
+        return acc;
+      }, {} as Record<string, ConvexFunction[]>);
       
-      // Check for missing dependencies in useEffect
-      const useEffectMatches = content.match(/useEffect\(\(\) => \{[^}]*\}, \[[^\]]*\]/g);
-      if (useEffectMatches) {
-        useEffectMatches.forEach(match => {
-          if (match.includes('[]') && (match.includes('user') || match.includes('clerkUser'))) {
-            this.violations.push({
-              file: relativePath,
-              line: 1,
-              violation: 'useEffect with empty deps array but references user data - potential stale closure',
-              severity: 'warning',
-              principle: 'Performance',
-              category: 'performance'
+      Object.entries(groupedFunctions).forEach(([path, functions]) => {
+        console.log(`   ${path}:`);
+        functions.forEach(fn => {
+          console.log(`      ${fn.name} (${fn.type})`);
+          if (fn.issues.length > 0) {
+            fn.issues.forEach(issue => {
+              console.log(`         ⚠️  ${issue}`);
             });
           }
         });
-      }
-
-      // Check for unnecessary re-renders
-      if (content.includes('useQuery') && !content.includes('useMemo') && content.includes('map(')) {
-        this.violations.push({
-          file: relativePath,
-          line: 1,
-          violation: 'Consider using useMemo for expensive computations with query results',
-          severity: 'warning',
-          principle: 'Performance',
-          category: 'performance'
-        });
-      }
-    }
-  }
-
-  // Helper methods
-  private async getComponentFiles(): Promise<string[]> {
-    const files: string[] = [];
-    const findTsxFiles = (dir: string) => {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory() && !entry.name.includes('node_modules') && !entry.name.includes('.next')) {
-          findTsxFiles(fullPath);
-        } else if (entry.isFile() && entry.name.endsWith('.tsx') && !entry.name.includes('.test.')) {
-          files.push(fullPath);
-        }
-      }
-    };
-    findTsxFiles(this.projectRoot);
-    return files;
-  }
-
-  private async getStoreFiles(): Promise<string[]> {
-    const storeDir = path.join(this.projectRoot, 'lib/store');
-    if (!fs.existsSync(storeDir)) return [];
-    
-    return fs.readdirSync(storeDir)
-      .filter(file => file.endsWith('.ts') && !file.includes('.test.'))
-      .map(file => path.join(storeDir, file));
-  }
-
-  private async getHookFiles(): Promise<string[]> {
-    const hooksDir = path.join(this.projectRoot, 'lib/hooks');
-    if (!fs.existsSync(hooksDir)) return [];
-    
-    return fs.readdirSync(hooksDir)
-      .filter(file => file.endsWith('.ts') && !file.includes('.test.'))
-      .map(file => path.join(hooksDir, file));
-  }
-
-  private async getConvexFiles(): Promise<string[]> {
-    const convexDir = path.join(this.projectRoot, 'convex');
-    if (!fs.existsSync(convexDir)) return [];
-    
-    return fs.readdirSync(convexDir)
-      .filter(file => file.endsWith('.ts') && !file.includes('_generated'))
-      .map(file => path.join(convexDir, file));
-  }
-
-  private containsBusinessData(line: string): boolean {
-    // First check if it's clearly UI-only state
-    const uiOnlyPatterns = [
-      /\b(expanded|collapsed|visible|hidden|active|inactive|open|closed)\b/i,
-      /\b(loading|error|success|pending|submitted)\b/i,
-      /\b(form|input|field|validation|modal|dialog|dropdown)\b/i,
-      /\b(theme|dark|light|sidebar|panel|tab|section)\b/i,
-      /\buiState\b/i, /\bexpandedsections\b/i, /\bcollapsedstate\b/i,
-      /\bshow\w*/i, /\bhide\w*/i, /\btoggle\w*/i,
-      /\bselected\w*/i, /\bhovered\w*/i, /\bfocused\w*/i
-    ];
-    
-    // If it matches UI patterns, it's NOT business data
-    if (uiOnlyPatterns.some(pattern => pattern.test(line))) {
-      return false;
-    }
-    
-    // Now check for business data patterns
-    const businessDataPatterns = [
-      /\bprojects?\b/i, /\busers?\b/i, /\bfiles?\b/i, /\bdocuments?\b/i, 
-      /\bentities\b/i, /\bmodels?\b/i, /\brecords?\b/i,
-      /\bprofile\b/i, /\baccount\b/i, /\bsettings\b/i, /\bpreferences\b/i,
-      /\b(server|api|database)data\b/i // More specific data patterns
-    ];
-    return businessDataPatterns.some(pattern => pattern.test(line));
-  }
-
-  private containsBusinessDataInStore(content: string): boolean {
-    const businessDataPatterns = [
-      'projects:', 'users:', 'files:', 'documents:', 'entities:', 'models:', 'records:',
-      'profileData:', 'userData:', 'accountData:', 'serverData:'
-    ];
-    return businessDataPatterns.some(pattern => content.includes(pattern));
-  }
-
-  private calculateAuthSyncScore(audit: AuthSyncAuditResult): number {
-    const scores = [
-      audit.hasAuthSync ? 25 : 0,
-      audit.isInLayout ? 25 : 0,
-      audit.hasUserHook ? 25 : 0,
-      audit.hasConvexIntegration ? 25 : 0
-    ];
-    return scores.reduce((a, b) => a + b, 0);
-  }
-
-  private calculateDataFlowScore(audit: DataFlowAuditResult): number {
-    const scores = [
-      audit.convexAsSourceOfTruth ? 25 : 0,
-      audit.zustandForUIOnly ? 25 : 0,
-      audit.customHooksPattern ? 25 : 0,
-      audit.noDirectConvexInComponents ? 25 : 0
-    ];
-    return scores.reduce((a, b) => a + b, 0);
-  }
-
-  private printEnhancedResults(result: AuditResult): void {
-    console.log('\n' + '='.repeat(60));
-    console.log('🔍 ENHANCED STATE MANAGEMENT AUDIT RESULTS');
-    console.log('='.repeat(60));
-
-    // Overall status
-    if (result.passed) {
-      console.log('\n✅ COMPREHENSIVE AUDIT PASSED!');
-    } else {
-      console.log('\n🔴 AUDIT FAILED - Critical Issues Found');
-    }
-
-    // Scores
-    console.log(`\n📊 ARCHITECTURE SCORES:`);
-    console.log(`   🔐 Auth Sync: ${result.summary.authSyncScore}/100`);
-    console.log(`   🌊 Data Flow: ${result.summary.dataFlowScore}/100`);
-    console.log(`   🎯 Overall: ${Math.round(result.summary.overallScore)}/100`);
-
-    // Summary
-    console.log(`\n📋 SUMMARY:`);
-    console.log(`   Files Audited: ${result.summary.totalFiles}`);
-    console.log(`   Errors: ${result.summary.errorsCount}`);
-    console.log(`   Warnings: ${result.summary.warningsCount}`);
-
-    // Auth sync details
-    console.log(`\n🔐 AUTHENTICATION SYNCHRONIZATION:`);
-    console.log(`   AuthSync Component: ${result.authSyncAudit.hasAuthSync ? '✅' : '❌'}`);
-    console.log(`   Layout Integration: ${result.authSyncAudit.isInLayout ? '✅' : '❌'}`);
-    console.log(`   User Hook Bridge: ${result.authSyncAudit.hasUserHook ? '✅' : '❌'}`);
-    console.log(`   Convex Integration: ${result.authSyncAudit.hasConvexIntegration ? '✅' : '❌'}`);
-
-    // Data flow details
-    console.log(`\n🌊 DATA FLOW ARCHITECTURE:`);
-    console.log(`   Convex as Source of Truth: ${result.dataFlowAudit.convexAsSourceOfTruth ? '✅' : '❌'}`);
-    console.log(`   Zustand UI-Only: ${result.dataFlowAudit.zustandForUIOnly ? '✅' : '❌'}`);
-    console.log(`   Custom Hooks Pattern: ${result.dataFlowAudit.customHooksPattern ? '✅' : '❌'}`);
-    console.log(`   No Direct Convex in Components: ${result.dataFlowAudit.noDirectConvexInComponents ? '✅' : '❌'}`);
-
-    // Violations by category
-    if (result.violations.length > 0) {
-      const violationsByCategory = result.violations.reduce((acc: Record<string, StateViolation[]>, violation) => {
-        if (!acc[violation.category]) acc[violation.category] = [];
-        acc[violation.category].push(violation);
-        return acc;
-      }, {} as Record<string, StateViolation[]>);
-
-      console.log(`\n🚨 VIOLATIONS BY CATEGORY:`);
-      Object.entries(violationsByCategory).forEach(([category, violations]: [string, StateViolation[]]) => {
-        const errors = violations.filter((v: StateViolation) => v.severity === 'error').length;
-        const warnings = violations.filter((v: StateViolation) => v.severity === 'warning').length;
-        console.log(`\n   ${category.toUpperCase()}: ${errors} errors, ${warnings} warnings`);
-        
-        // Show specific violations
-        violations.forEach((violation: StateViolation) => {
-          const icon = violation.severity === 'error' ? '❌' : '⚠️';
-          console.log(`     ${icon} ${violation.file}:${violation.line} - ${violation.violation}`);
-        });
       });
     }
-
-    console.log('\n' + '='.repeat(60));
+    
+    // Recommendations
+    if (results.recommendations.length > 0) {
+      console.log('\n💡 Recommendations:');
+      results.recommendations.forEach(rec => {
+        console.log(`   • ${rec}`);
+      });
+    }
+    
+    // Health check
+    const healthScore = Math.max(0, 100 - (results.summary.totalIssues * 10));
+    const healthEmoji = healthScore >= 80 ? '🟢' : healthScore >= 60 ? '🟡' : '🔴';
+    
+    console.log(`\n${healthEmoji} State Management Health Score: ${healthScore}/100`);
+    
+    if (results.summary.totalIssues === 0) {
+      console.log('\n✅ All state management patterns look good!');
+    } else {
+      console.log(`\n⚠️  Found ${results.summary.totalIssues} issue(s) that could be addressed.`);
+    }
+    
+    console.log('\n' + '='.repeat(50));
   }
 }
 
-export { StateAuditor, type AuditResult, type StateViolation };
-
-// CLI runner
-if (require.main === module) {
-  const auditor = new StateAuditor();
-  auditor.auditCompleteArchitecture().then((result: AuditResult) => {
-    process.exit(result.passed ? 0 : 1);
-  }).catch((error: Error) => {
-    console.error('❌ Enhanced audit failed:', error);
+// Run the audit
+async function runAudit() {
+  const auditor = new StateAuditor(process.cwd());
+  
+  try {
+    const results = await auditor.audit();
+    auditor.printResults(results);
+    
+    // Exit with appropriate code
+    process.exit(results.summary.totalIssues > 0 ? 1 : 0);
+  } catch (error) {
+    console.error('❌ Audit failed:', error);
     process.exit(1);
-  });
+  }
+}
+
+// Execute if run directly
+if (require.main === module) {
+  runAudit();
 }

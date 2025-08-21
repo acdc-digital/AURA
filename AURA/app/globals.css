@@ -171,3 +171,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* San Francisco font for header title */
+.font-sf {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+}

@@ -6,23 +6,32 @@
 import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/lib/store";
 import { useConvexAuth } from "convex/react";
+import { Id } from "@/convex/_generated/dataModel";
 import { ChevronLeft, ChevronRight, Plus, X, FileCode, FileText, Settings, CreditCard, User, Calendar } from "lucide-react";
 import { UserProfile } from "@/app/_components/activity/_components/userProfle/UserProfile";
 import { FileExplorerTab } from "@/app/_components/activity/_components/fileExplorer";
-import { CalendarTab } from "@/app/_components/activity/_components/calendar";
+import CalendarTab from "@/app/_components/activity/_components/calendar/CalendarTab";
+import SocialConnectorTab from "@/app/_components/activity/_components/socialConnectors/SocialConnectorTab";
+import { FileTabContainer } from "@/app/_components/dashboard/_components/fileTab";
 
 export function Navigator() {
-  const { 
+  const {
     tabs,
     activeTabId,
-    openTab,
+    setActiveTab,
     closeTab,
-    setActiveTab
+    openTab
   } = useEditorStore();
 
-  const { isAuthenticated } = useConvexAuth();
-  
-  const [scrollPosition, setScrollPosition] = useState(0);
+  // Safely handle Convex auth - may not be available during SSR
+  let isAuthenticated = false;
+  try {
+    const convexAuth = useConvexAuth();
+    isAuthenticated = convexAuth?.isAuthenticated || false;
+  } catch (error) {
+    // Convex provider not available - continue with default state
+    console.warn('Convex provider not available:', error);
+  }  const [scrollPosition, setScrollPosition] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredTab, setHoveredTab] = useState<string | null>(null);
@@ -104,7 +113,8 @@ export function Navigator() {
           <div 
             className="flex transition-transform duration-200 h-full"
             style={{ 
-              transform: `translateX(-${scrollPosition * 200}px)` 
+              transform: `translateX(-${scrollPosition * 200}px)`,
+              // Dynamic transform values require inline styles for reactivity
             }}
           >
             {tabs.map((tab) => (
@@ -113,15 +123,12 @@ export function Navigator() {
                 onMouseEnter={() => setHoveredTab(tab.id)}
                 onMouseLeave={() => setHoveredTab(null)}
                 className={`
-                  flex items-center gap-2 px-3 h-[35px] text-xs border-r border-[#2d2d2d] ${isAuthenticated ? 'cursor-pointer' : 'cursor-default'} flex-shrink-0 transition-colors duration-150
+                  flex items-center gap-2 px-3 h-[35px] text-xs border-r border-[#2d2d2d] ${isAuthenticated ? 'cursor-pointer' : 'cursor-default'} flex-shrink-0 transition-colors duration-150 w-[200px]
                   ${activeTabId === tab.id
                     ? 'bg-[#1a1a1a] text-[#cccccc]'
                     : 'bg-[#0e0e0e] text-[#858585] hover:bg-[#181818]'
                   }
                 `}
-                style={{ 
-                  width: '200px'
-                }}
                 onClick={() => setActiveTab(tab.id)}
               >
                 {(() => {
@@ -205,6 +212,7 @@ export function Navigator() {
             {currentTab.type === 'user-profile' && <UserProfile />}
             {currentTab.type === 'file' && currentTab.id === 'file-explorer' && <FileExplorerTab />}
             {currentTab.type === 'calendar' && <CalendarTab />}
+            {currentTab.type === 'social-connector' && <SocialConnectorTab />}
             {currentTab.type === 'subscription' && (
               <div className="p-8 text-center">
                 <h2 className="text-xl font-semibold text-[#cccccc] mb-4">
@@ -226,16 +234,24 @@ export function Navigator() {
               </div>
             )}
             {(currentTab.type === 'file' && currentTab.id !== 'file-explorer') && (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center space-y-4">
-                  <h2 className="text-xl font-semibold text-[#cccccc]">
-                    {currentTab.title}
-                  </h2>
-                  <p className="text-[#858585]">
-                    Edit your file here
-                  </p>
+              currentTab.filePath ? (
+                <FileTabContainer
+                  fileId={currentTab.id.replace('file-', '') as Id<"files">}
+                  fileName={currentTab.title}
+                  filePath={currentTab.filePath}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center space-y-4">
+                    <h2 className="text-xl font-semibold text-[#cccccc]">
+                      {currentTab.title}
+                    </h2>
+                    <p className="text-[#858585]">
+                      Edit your file here
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )
             )}
             {currentTab.type === 'welcome' && (
               <div className="flex items-center justify-center h-full">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { ClerkProvider } from "@clerk/nextjs";
+import { ThemeProvider } from "@/provider/theme-provider";
 import { AuthSync } from "./_components/auth/AuthSync";
 import { AgentInitializer } from "./_components/agents/AgentInitializer";
 import { ExtensionInitializer } from "./_components/extensions/ExtensionInitializer";
@@ -20,16 +21,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="dark">
+    <html lang="en" suppressHydrationWarning>
+      <body>
         <ClerkProvider dynamic>
           <ConvexClientProvider>
-            <AuthSync />
-            <AgentInitializer />
-            <ExtensionInitializer />
-            <div className="flex-1">
-              {children}
-            </div>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <AuthSync />
+              <AgentInitializer />
+              <ExtensionInitializer />
+              <div className="flex-1">
+                {children}
+              </div>
+            </ThemeProvider>
           </ConvexClientProvider>
         </ClerkProvider>
       </body>

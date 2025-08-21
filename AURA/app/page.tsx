@@ -11,6 +11,7 @@ import { Terminal } from "./_components/terminal";
 import { AuthWrapper } from "@/app/_components/auth/AuthWrapper";
 import { ResizablePanelGroup, ResizablePanel /*, ResizableHandle */ } from "@/components/ui/resizable";
 import { useSidebarStore } from "@/lib/store";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function HomePage() {
   const { activePanel, setActivePanel } = useSidebarStore();
@@ -22,9 +23,14 @@ export default function HomePage() {
         <header className="h-8 bg-[#181818] border-b border-[#2d2d2d] flex items-center px-0 select-none">
           {/* Title */}
           <div className="flex-1 flex justify-start ml-2">
-            <span className="text-xs text-[#858585]">
+            <span className="text-xs text-[#858585] font-sf">
               AURA - Automate Your Aura
             </span>
+          </div>
+          
+          {/* Theme Toggle */}
+          <div className="flex items-center pr-4">
+            <ThemeToggle />
           </div>
         </header>
 

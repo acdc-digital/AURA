@@ -12,7 +12,8 @@ import {
   FileType,
   MessageSquare,
   File,
-  X
+  X,
+  GripVertical
 } from "lucide-react";
 import { useState } from "react";
 
@@ -27,6 +28,14 @@ export function FileTreeItem({ file, onOpen, onDelete, onRename }: FileTreeItemP
   // Ephemeral UI state for inline renaming - not business data
   const [isRenaming, setIsRenaming] = useState(false);
   const [tempRenameValue, setTempRenameValue] = useState('');
+
+  // Parse .md extension from filename for display in sidebar
+  const getDisplayName = (fileName: string) => {
+    if (fileName.endsWith('.md')) {
+      return fileName.replace(/\.md$/, '');
+    }
+    return fileName;
+  };
 
   // Get file icon based on type and platform
   const getFileIcon = () => {
@@ -143,18 +152,24 @@ export function FileTreeItem({ file, onOpen, onDelete, onRename }: FileTreeItemP
       onDoubleClick={handleDoubleClick}
     >
       <Icon className="w-4 h-4 flex-shrink-0 text-[#858585]" />
-      <span className="text-sm truncate flex-1">{file.name}</span>
+      <span className="text-sm truncate flex-1">{getDisplayName(file.name)}</span>
       {getStatusBadge()}
       
-      {/* Delete button - shows on hover */}
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+      {/* File action buttons - drag and delete */}
+      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity ml-1">
+        <button
+          className="p-0.5 hover:bg-[#3d3d3d] rounded transition-colors cursor-grab active:cursor-grabbing"
+          title="Drag to reorder"
+        >
+          <GripVertical className="w-3 h-3 text-[#858585] hover:text-[#cccccc]" />
+        </button>
         {onDelete && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
             }}
-            className="p-1 hover:bg-[#3c3c3c] rounded transition-colors"
+            className="p-0.5 hover:bg-[#3c3c3c] rounded transition-colors"
             title="Delete file"
           >
             <X className="w-3 h-3 text-[#858585] hover:text-[#ff6b6b] transition-colors" />

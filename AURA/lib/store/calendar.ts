@@ -21,6 +21,7 @@ export interface CalendarFilters {
 export interface CalendarState {
   // Current view state
   currentView: CalendarView;
+  view: CalendarView; // Alias for currentView to match component usage
   currentDate: Date;
   selectedDate: Date | null;
   
@@ -91,6 +92,7 @@ export type CalendarStore = CalendarState & CalendarActions;
 const defaultState: CalendarState = {
   // Current view state
   currentView: 'week',
+  view: 'week', // Alias for currentView
   currentDate: new Date(),
   selectedDate: null,
   
@@ -167,7 +169,7 @@ export const useCalendarStore = create<CalendarStore>()(
       ...defaultState,
       
       // View actions
-      setCurrentView: (view) => set({ currentView: view }),
+      setCurrentView: (view) => set({ currentView: view, view: view }),
       setCurrentDate: (date) => set({ currentDate: date }),
       setSelectedDate: (date) => set({ selectedDate: date }),
       navigateToToday: () => set({ currentDate: new Date() }),
