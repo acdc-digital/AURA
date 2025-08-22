@@ -7,11 +7,13 @@ import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/lib/store";
 import { useConvexAuth } from "convex/react";
 import { Id } from "@/convex/_generated/dataModel";
-import { ChevronLeft, ChevronRight, Plus, X, FileCode, FileText, Settings, CreditCard, User, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, FileCode, FileText, Settings, CreditCard, User, Calendar, Bot, Puzzle } from "lucide-react";
 import { UserProfile } from "@/app/_components/activity/_components/userProfle/UserProfile";
 import { FileExplorerTab } from "@/app/_components/activity/_components/fileExplorer";
 import CalendarTab from "@/app/_components/activity/_components/calendar/CalendarTab";
 import SocialConnectorTab from "@/app/_components/activity/_components/socialConnectors/SocialConnectorTab";
+import { AgentTab } from "@/app/_components/activity/_components/agents";
+import { ExtensionTab } from "@/app/_components/activity/_components/extensions";
 import { FileTabContainer } from "@/app/_components/dashboard/_components/fileTab";
 
 export function Navigator() {
@@ -97,6 +99,10 @@ export function Navigator() {
         return User;
       case 'calendar':
         return Calendar;
+      case 'agent':
+        return Bot;
+      case 'extension':
+        return Puzzle;
       default:
         return FileCode;
     }
@@ -107,7 +113,7 @@ export function Navigator() {
   return (
     <div className="flex-1 flex flex-col bg-[#1a1a1a] h-full">
       {/* Tab Bar */}
-      <div className="h-[35px] bg-[#181818] border-b border-r border-[#2d2d2d] relative flex-shrink-0">
+      <div className="h-[35px] bg-[#1e1e1e] border-b border-r border-[#2d2d2d] relative flex-shrink-0">
         {/* Tab Container - Full width with space for buttons */}
         <div ref={containerRef} className="absolute left-8 right-16 top-0 bottom-0 overflow-hidden bg-[#1e1e1e]">
           <div 
@@ -156,38 +162,36 @@ export function Navigator() {
         </div>
 
         {/* Left Scroll Button - Overlay */}
-        <button
-          onClick={scrollLeft}
-          disabled={!canScrollLeft}
-          className={`
-            absolute left-0 z-10 w-8 h-[35px] flex items-center justify-center border-r border-b border-[#2d2d2d] bg-[#181818]
-            ${canScrollLeft 
-              ? 'hover:bg-[#2d2d2d] text-[#858585]' 
-              : 'text-[#3d3d3d] opacity-30'
-            }
-          `}
-        >
-          <span className="sr-only">Scroll left</span>
-          <ChevronLeft className="w-3 h-3" />
-        </button>
+        <div className="absolute left-0 z-10 w-8 h-[35px] border-r border-b border-[#2d2d2d] bg-[#1e1e1e]">
+          <button
+            onClick={scrollLeft}
+            disabled={!canScrollLeft}
+            className={`w-full h-full flex items-center justify-center ${canScrollLeft
+                ? 'hover:bg-[#2d2d2d] text-[#858585]'
+                : 'text-[#3d3d3d] opacity-30'
+              }`}
+          >
+            <span className="sr-only">Scroll left</span>
+            <ChevronLeft className="w-3 h-3" />
+          </button>
+        </div>
 
         {/* Right side buttons container - Overlay */}
-        <div className="absolute right-0 z-10 flex h-[35px] bg-[#181818] border-b border-[#2d2d2d]">
+        <div className="absolute right-0 z-10 flex h-[35px] bg-[#1e1e1e] border-b border-[#2d2d2d]">
           {/* Right Scroll Button */}
-          <button
-            onClick={scrollRight}
-            disabled={!canScrollRight}
-            className={`
-              w-8 h-[35px] flex items-center justify-center border-l border-[#2d2d2d]
-              ${canScrollRight 
-                ? 'hover:bg-[#2d2d2d] text-[#858585]' 
-                : 'text-[#3d3d3d] opacity-30'
-              }
-            `}
-          >
-            <span className="sr-only">Scroll right</span>
-            <ChevronRight className="w-3 h-3" />
-          </button>
+          <div className="w-8 h-[35px] border-l border-[#2d2d2d]">
+            <button
+              onClick={scrollRight}
+              disabled={!canScrollRight}
+              className={`w-full h-full flex items-center justify-center ${canScrollRight
+                  ? 'hover:bg-[#2d2d2d] text-[#858585]'
+                  : 'text-[#3d3d3d] opacity-30'
+                }`}
+            >
+              <span className="sr-only">Scroll right</span>
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
             
           {/* Add New Tab Button */}
           <button
@@ -213,6 +217,8 @@ export function Navigator() {
             {currentTab.type === 'file' && currentTab.id === 'file-explorer' && <FileExplorerTab />}
             {currentTab.type === 'calendar' && <CalendarTab />}
             {currentTab.type === 'social-connector' && <SocialConnectorTab />}
+            {currentTab.type === 'agent' && <AgentTab />}
+            {currentTab.type === 'extension' && <ExtensionTab />}
             {currentTab.type === 'subscription' && (
               <div className="p-8 text-center">
                 <h2 className="text-xl font-semibold text-[#cccccc] mb-4">

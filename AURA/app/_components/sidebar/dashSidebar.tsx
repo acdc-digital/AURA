@@ -5,8 +5,9 @@
 
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { PanelType } from "@/lib/store";
-import { UserConsole, AgentsPanel, DashTrash } from "@/app/_components/activity/_components";
-import { ExtensionsPanel } from "@/app/_components/activity/_components/extensions";
+import { UserConsole, DashTrash } from "@/app/_components/activity/_components";
+import { AgentsPanel } from "@/app/_components/activity/_components/agents";
+import ExtensionsPanelNew from "@/app/_components/activity/_components/extensions/ExtensionsPanelNew";
 import { FileExplorerPanel } from "@/app/_components/activity/_components/fileExplorer";
 import CalendarPanel from "@/app/_components/activity/_components/calendar/CalendarPanel";
 import SocialConnectorsPanel from "@/app/_components/activity/_components/socialConnectors/SocialConnectorsPanel";
@@ -141,7 +142,7 @@ export function DashSidebar({ activePanel }: DashSidebarProps) {
         );
       
       case 'extensions':
-        return <ExtensionsPanel />;
+        return <ExtensionsPanelNew />;
       
       case 'trash':
         return isSignedIn ? (

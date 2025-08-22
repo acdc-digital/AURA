@@ -56,6 +56,16 @@ export function DashActivityBar({ activePanel, onPanelChange }: ActivityBarProps
     if (id === 'calendar') {
       openSpecialTab('calendar', 'Calendar', 'calendar');
     }
+
+    // Handle agents special case - open both sidebar and tab
+    if (id === 'agents') {
+      openSpecialTab('agents', 'AI Agents', 'agent');
+    }
+
+    // Handle extensions special case - open both sidebar and tab
+    if (id === 'extensions') {
+      openSpecialTab('extensions', 'Extensions', 'extension');
+    }
     
     // Handle social-connectors - sidebar only, no tab
     if (id === 'social-connectors') {

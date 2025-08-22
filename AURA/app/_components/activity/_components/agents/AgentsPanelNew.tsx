@@ -41,7 +41,9 @@ export default function AgentsPanel({ className = "" }: AgentsPanelProps) {
   const { 
     activeAgents, 
     toggleAgent,
-    isAgentActive
+    isAgentActive,
+    selectedAgentId,
+    setSelectedAgent
   } = useAgentStore();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -139,7 +141,7 @@ export default function AgentsPanel({ className = "" }: AgentsPanelProps) {
                   <div className="flex-shrink-0">
                     {(() => {
                       // Handle emoji icons first
-                      if (agent.icon && !iconMap.hasOwnProperty(agent.icon as keyof typeof iconMap)) {
+                      if (agent.icon && !iconMap.hasOwnProperty(agent.icon as any)) {
                         return <span className="text-sm">{agent.icon}</span>;
                       }
                       
@@ -251,7 +253,7 @@ export default function AgentsPanel({ className = "" }: AgentsPanelProps) {
       <div className="absolute bottom-0 left-0 right-0 p-2 bg-[#181818] border-t border-[#2d2d2d]">
         <div className="text-[10px] text-[#858585] text-center leading-relaxed">
           {activeAgentsList.length > 0 ? (
-            <>Use terminal&apos;s <code className="bg-[#2d2d2d] px-1 rounded">/</code> menu to access {activeAgentsList.length} active agent{activeAgentsList.length !== 1 ? 's' : ''}</>
+            <>Use terminal's <code className="bg-[#2d2d2d] px-1 rounded">/</code> menu to access {activeAgentsList.length} active agent{activeAgentsList.length !== 1 ? 's' : ''}</>
           ) : (
             <>Click the checkbox to activate agents and access their tools</>
           )}
