@@ -1,112 +1,160 @@
-// TERMINAL HEADER ROW - Multi-terminal tab management
+// TERMINAL HEADER ROW - Multi-terminal tab management with navigation buttons
 // /Users/matthewsimon/Projects/AURA/AURA/app/_components/terminal/_components/TerminalHeaderRow.tsx
 
 "use client";
 
 import { useTerminalStore } from "@/lib/store/terminal";
 import { useConvexAuth } from "convex/react";
-import { Loader2, Plus, X } from "lucide-react";
-import { useCallback } from "react";
+import { Bell, History, Loader2, Settings, Terminal as TerminalIcon } from "lucide-react";
 
 export function TerminalHeaderRow() {
   const { isAuthenticated } = useConvexAuth();
   const {
-    terminals,
-    activeTerminalId,
     isProcessing,
-    createTerminal,
-    removeTerminal,
-    setActiveTerminal,
+    activeTab,
+    setActiveTab,
+    alerts,
+    toggleCollapse,
   } = useTerminalStore();
-
-  const handleCreateTerminal = useCallback(() => {
-    if (!isAuthenticated) return;
-    createTerminal();
-  }, [isAuthenticated, createTerminal]);
-
-  const handleCloseTerminal = useCallback((terminalId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isAuthenticated) return;
-    removeTerminal(terminalId);
-  }, [isAuthenticated, removeTerminal]);
-
-  const handleSwitchTerminal = useCallback((terminalId: string) => {
-    if (!isAuthenticated) return;
-    setActiveTerminal(terminalId);
-  }, [isAuthenticated, setActiveTerminal]);
-
-  const terminalArray = Array.from(terminals.entries());
 
   return (
     <div className="h-[35px] bg-[#0e639c] flex items-center justify-between px-0 flex-shrink-0 rounded-t-sm">
-      {/* Terminal tabs */}
+      {/* Left side - Tab buttons and terminal tabs */}
       <div className="flex items-center h-full overflow-x-auto">
-        {terminalArray.map(([id, terminal]) => (
-          <div
-            key={id}
-            className={`flex items-center h-[35px] px-3 min-w-[120px] max-w-[200px] border-r border-[#ffffff10] cursor-pointer ${
-              activeTerminalId === id 
-                ? 'bg-[#094771] text-white' 
-                : 'bg-transparent text-white hover:bg-[#ffffff20]'
-            } ${!isAuthenticated ? 'opacity-60 cursor-default' : ''}`}
-            onClick={() => handleSwitchTerminal(id)}
-            title={terminal.title}
+        {/* Navigation Tab Buttons */}
+        <div className="flex items-center h-full border-r border-[#ffffff20] pr-2">
+          <button
+            className={`text-xs h-[35px] px-3 min-w-[70px] flex items-center justify-center ${
+              activeTab === 'terminal'
+                ? 'bg-[#094771] text-white rounded-tl-sm'
+                : 'bg-transparent text-white'
+            } ${
+              isAuthenticated
+                ? 'hover:bg-[#ffffff20] cursor-pointer'
+                : 'opacity-60 cursor-default'
+            }`}
+            onClick={() => {
+              if (!isAuthenticated) return;
+              if (activeTab === 'terminal') {
+                // If terminal tab is already active, collapse the terminal
+                toggleCollapse();
+              } else {
+                // If not active, switch to terminal tab
+                setActiveTab("terminal");
+              }
+            }}
+            disabled={!isAuthenticated}
+            title={isAuthenticated ? (activeTab === 'terminal' ? "Collapse Terminal" : "Terminal") : ""}
           >
-            {/* Terminal status indicator */}
-            <div className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
-              terminal.isProcessing 
-                ? 'bg-[#fbbf24]' 
-                : terminal.process.status === 'idle' 
-                  ? 'bg-[#22c55e]' 
-                  : 'bg-[#ef4444]'
-            }`} />
-            
-            {/* Terminal title */}
-            <span className="text-xs truncate flex-1">{terminal.title}</span>
-            
-            {/* Processing indicator */}
-            {terminal.isProcessing && (
-              <Loader2 className="w-3 h-3 ml-1 animate-spin" />
+            <TerminalIcon className="w-3 h-3 mr-1" />
+            Terminal
+          </button>
+
+          <button
+            className={`text-xs h-[35px] px-3 min-w-[70px] flex items-center justify-center ${
+              activeTab === 'history'
+                ? 'bg-[#094771] text-white'
+                : 'bg-transparent text-white'
+            } ${
+              isAuthenticated
+                ? 'hover:bg-[#ffffff20] cursor-pointer'
+                : 'opacity-60 cursor-default'
+            }`}
+            onClick={() => {
+              if (!isAuthenticated) return;
+              setActiveTab("history");
+            }}
+            disabled={!isAuthenticated}
+            title={isAuthenticated ? "Command History" : ""}
+          >
+            <History className="w-3 h-3 mr-1" />
+            History
+          </button>
+
+          <button
+            className={`text-xs h-[35px] px-3 min-w-[70px] flex items-center justify-center relative ${
+              activeTab === 'alerts'
+                ? 'bg-[#094771] text-white'
+                : 'bg-transparent text-white'
+            } ${
+              isAuthenticated
+                ? 'hover:bg-[#ffffff20] cursor-pointer'
+                : 'opacity-60 cursor-default'
+            }`}
+            onClick={() => {
+              if (!isAuthenticated) return;
+              setActiveTab("alerts");
+            }}
+            disabled={!isAuthenticated}
+            title={isAuthenticated ? "Alerts" : ""}
+          >
+            <Bell className="w-3 h-3 mr-1" />
+            Alerts
+            {alerts.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                {alerts.length > 9 ? '9+' : alerts.length}
+              </span>
             )}
-            
-            {/* Close button */}
-            {terminalArray.length > 1 && (
-              <button
-                className="ml-2 p-0.5 hover:bg-[#ffffff30] rounded transition-colors"
-                onClick={(e) => handleCloseTerminal(id, e)}
-                title="Close terminal"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-        ))}
-        
-        {/* Add new terminal button */}
-        <button
-          className={`h-[35px] px-3 flex items-center justify-center text-white transition-colors ${
-            isAuthenticated 
-              ? 'hover:bg-[#ffffff20] cursor-pointer' 
-              : 'opacity-60 cursor-default'
-          }`}
-          onClick={handleCreateTerminal}
-          disabled={!isAuthenticated}
-          title={isAuthenticated ? "New Terminal" : "Sign in to create terminals"}
-        >
-          <Plus className="w-3 h-3" />
-        </button>
+          </button>
+
+          <button
+            className={`text-xs h-[35px] px-3 min-w-[70px] flex items-center justify-center ${
+              activeTab === 'settings'
+                ? 'bg-[#094771] text-white'
+                : 'bg-transparent text-white'
+            } ${
+              isAuthenticated
+                ? 'hover:bg-[#ffffff20] cursor-pointer'
+                : 'opacity-60 cursor-default'
+            }`}
+            onClick={() => {
+              if (!isAuthenticated) return;
+              setActiveTab("settings");
+            }}
+            disabled={!isAuthenticated}
+            title={isAuthenticated ? "Settings" : ""}
+          >
+            <Settings className="w-3 h-3 mr-1" />
+            Settings
+          </button>
+        </div>
       </div>
       
-      {/* Global status */}
+      {/* Right side - Tab-specific info and collapse button */}
       <div className="flex items-center space-x-2 px-3 text-xs text-white">
-        {isProcessing && (
-          <div className="flex items-center space-x-1">
-            <Loader2 className="w-3 h-3 animate-spin" />
-            <span>Processing...</span>
-          </div>
+        {/* Tab-specific status and counts */}
+        {activeTab === 'terminal' && (
+          <>
+            {isProcessing && (
+              <div className="flex items-center space-x-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Processing...</span>
+              </div>
+            )}
+          </>
         )}
-        <span>{terminalArray.length} terminal{terminalArray.length === 1 ? '' : 's'}</span>
+        
+        {activeTab === 'history' && (
+          <span>1 history</span>
+        )}
+        
+        {activeTab === 'alerts' && (
+          <span>{alerts.length} alert{alerts.length === 1 ? '' : 's'}</span>
+        )}
+        
+        {activeTab === 'settings' && (
+          <span>settings</span>
+        )}
       </div>
+      
+      {/* Collapse button with dynamic icon */}
+      <button
+        className="h-[25px] px-2 text-white border border-[#cccccc40] hover:bg-[#ffffff20] rounded flex items-center justify-center mr-2 transition-colors duration-150"
+        onClick={toggleCollapse}
+        title="Collapse Terminal"
+      >
+        <span className="text-xs">−</span>
+      </button>
     </div>
   );
 }

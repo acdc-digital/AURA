@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as chat from "../chat.js";
 import type * as files from "../files.js";
+import type * as orchestrator from "../orchestrator.js";
 import type * as projects from "../projects.js";
 import type * as socialConnections from "../socialConnections.js";
 import type * as socialPosts from "../socialPosts.js";
@@ -33,6 +34,7 @@ import type * as users from "../users.js";
 declare const fullApi: ApiFromModules<{
   chat: typeof chat;
   files: typeof files;
+  orchestrator: typeof orchestrator;
   projects: typeof projects;
   socialConnections: typeof socialConnections;
   socialPosts: typeof socialPosts;

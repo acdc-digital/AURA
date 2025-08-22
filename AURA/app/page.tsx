@@ -9,12 +9,33 @@ import { Navigator } from "./_components/editor/Navigator";
 import { DashSidebar } from "./_components/sidebar/dashSidebar";
 import { Terminal } from "./_components/terminal";
 import { AuthWrapper } from "@/app/_components/auth/AuthWrapper";
-import { ResizablePanelGroup, ResizablePanel /*, ResizableHandle */ } from "@/components/ui/resizable";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSidebarStore } from "@/lib/store";
+import { useTerminalStore } from "@/lib/store/terminal";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useEffect, useRef } from "react";
+import { ImperativePanelHandle } from "react-resizable-panels";
 
 export default function HomePage() {
   const { activePanel, setActivePanel } = useSidebarStore();
+  const { isCollapsed } = useTerminalStore();
+  const terminalPanelRef = useRef<ImperativePanelHandle>(null);
+  const editorPanelRef = useRef<ImperativePanelHandle>(null);
+
+  // Programmatically resize panels when collapse state changes
+  useEffect(() => {
+    if (terminalPanelRef.current && editorPanelRef.current) {
+      if (isCollapsed) {
+        // Collapse: terminal to 4.5%, editor to 95.5%
+        terminalPanelRef.current.resize(4.5);
+        editorPanelRef.current.resize(95.5);
+      } else {
+        // Expand: terminal to 30%, editor to 70%
+        terminalPanelRef.current.resize(30);
+        editorPanelRef.current.resize(70);
+      }
+    }
+  }, [isCollapsed]);
 
   return (
     <AuthWrapper>
@@ -50,14 +71,25 @@ export default function HomePage() {
             {/* Editor and Terminal - Resizable vertical split */}
             <ResizablePanelGroup direction="vertical" className="flex-1">
               {/* Editor Panel */}
-              <ResizablePanel defaultSize={70} minSize={30}>
+              <ResizablePanel
+                ref={editorPanelRef}
+                defaultSize={isCollapsed ? 97 : 70}
+                minSize={isCollapsed ? 95 : 30}
+              >
                 <Navigator />
               </ResizablePanel>
               
-              {/* <ResizableHandle withHandle /> */}
+              {/* Only show ResizableHandle when terminal is expanded */}
+              {!isCollapsed && <ResizableHandle />}
               
               {/* Terminal Panel */}
-              <Terminal />
+              <ResizablePanel
+                ref={terminalPanelRef}
+                defaultSize={isCollapsed ? 4.5 : 30}
+                minSize={isCollapsed ? 4.5 : 25}
+              >
+                <Terminal />
+              </ResizablePanel>
             </ResizablePanelGroup>
           </div>
         </div>

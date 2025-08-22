@@ -2,6 +2,7 @@
 // /Users/matthewsimon/Projects/AURA/AURA/lib/store/terminal.ts
 
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface Alert {
   id: string;
@@ -29,8 +30,9 @@ interface Terminal {
 interface TerminalState {
   // Panel state
   isCollapsed: boolean;
-  activeTab: "terminal" | "history" | "alerts";
+  activeTab: "terminal" | "history" | "alerts" | "settings";
   size: number;
+  height: number; // Terminal height in pixels
 
   // Multi-terminal support
   terminals: Map<string, Terminal>;
@@ -44,8 +46,9 @@ interface TerminalState {
   // Actions - Panel management
   setCollapsed: (collapsed: boolean) => void;
   toggleCollapse: () => void;
-  setActiveTab: (tab: "terminal" | "history" | "alerts") => void;
+  setActiveTab: (tab: "terminal" | "history" | "alerts" | "settings") => void;
   setSize: (size: number) => void;
+  setHeight: (height: number) => void;
 
   // Actions - Terminal management
   createTerminal: (id?: string, title?: string) => string;
@@ -66,14 +69,17 @@ interface TerminalState {
   removeAlert: (id: string) => void;
 }
 
-export const useTerminalStore = create<TerminalState>((set, get) => ({
-  // Initial state
-  isCollapsed: true,
-  activeTab: "terminal",
-  size: 40,
+export const useTerminalStore = create<TerminalState>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      isCollapsed: true,
+      activeTab: "terminal",
+      size: 40,
+      height: 400, // Default terminal height
 
-  // Multi-terminal state
-  terminals: new Map(),
+      // Multi-terminal state
+      terminals: new Map(),
   activeTerminalId: null,
   commandHistory: [],
   isProcessing: false,
@@ -91,10 +97,12 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       activeTab: !state.isCollapsed ? state.activeTab : "terminal",
     })),
 
-  setActiveTab: (tab: "terminal" | "history" | "alerts") =>
+  setActiveTab: (tab: "terminal" | "history" | "alerts" | "settings") =>
     set({ activeTab: tab }),
 
   setSize: (size: number) => set({ size }),
+
+  setHeight: (height: number) => set({ height }),
 
   // Terminal management actions
   createTerminal: (id?: string, title?: string) => {
@@ -261,4 +269,13 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
     set((state) => ({
       alerts: state.alerts.filter((alert) => alert.id !== id),
     })),
-}));
+    }),
+    {
+      name: 'terminal-storage',
+      partialize: (state) => ({
+        height: state.height,
+        isCollapsed: state.isCollapsed,
+      }),
+    }
+  )
+);
