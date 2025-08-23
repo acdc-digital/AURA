@@ -8,6 +8,7 @@ import { useTerminalStore } from "@/lib/store/terminal";
 import { useTerminalSessionStore } from "@/lib/store/terminal-sessions";
 import { useSessionMessages } from "@/lib/hooks/useSessionMessages";
 import { useSessionSync } from "@/lib/hooks/useSessionSync";
+import { EnhancedPromptInput } from "@/components/ai/enhanced-prompt-input";
 import { api } from "@/convex/_generated/api";
 import { useConvexAuth } from "convex/react";
 import { useAction } from "convex/react";
@@ -274,6 +275,15 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
     }
   }, [input, commandHistory, historyIndex, processCommand, clearBuffer, terminalId]);
 
+  // Enhanced input submit handler
+  const handleEnhancedSubmit = useCallback(async (messageContent: string) => {
+    if (messageContent.trim()) {
+      await processCommand(messageContent.trim());
+    }
+    setInput("");
+    setHistoryIndex(-1);
+  }, [processCommand]);
+
   if (!terminal) {
     return (
       <div className="flex-1 bg-[#0e0e0e] flex items-center justify-center">
@@ -398,20 +408,20 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
               ))
             )}
           </div>          {/* Current input line - fixed at bottom */}
-          <div className="flex items-center space-x-2 px-3 py-2 border-t border-[#1f1f1f] flex-shrink-0 bg-[#0e0e0e] min-h-[36px]">
-            <span className="text-[#0ea5e9] font-medium flex-shrink-0 text-xs">
-              {chatMode ? "chat>" : `${terminal.currentDirectory} $`}
-            </span>
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="flex-1 bg-transparent text-[#cccccc] outline-none font-mono text-xs leading-normal min-h-[18px]"
-              placeholder={chatMode ? "Ask anything..." : "Type a command..."}
-              disabled={terminal.isProcessing}
-            />
+          <div className="flex items-center space-x-2 px-2 pt-2 border-t border-[#1f1f1f] flex-shrink-0 bg-[#0e0e0e] min-h-[28px]">
+            <div className="flex-1">
+              <EnhancedPromptInput
+                value={input}
+                onChange={setInput}
+                onSubmit={handleEnhancedSubmit}
+                placeholder={chatMode ? "Ask anything... (Shift+Enter for new line)" : "Type a command... (Shift+Enter for new line)"}
+                disabled={terminal.isProcessing}
+                isLoading={terminal.isProcessing}
+                showToolbar={false}
+                multiline={true}
+                className="border-none bg-transparent"
+              />
+            </div>
             {terminal.isProcessing && (
               <Loader2 className="w-3 h-3 text-[#0ea5e9] animate-spin flex-shrink-0" />
             )}

@@ -19,7 +19,9 @@ import { EditInstructionsInput } from "./editInstructionsInput";
 import { FileNameInput } from "./fileNameInput";
 import { FileSelector } from "./fileSelector";
 import { FileTypeSelector } from "./fileTypeSelector";
-import { MarkdownRenderer } from "./markdownRenderer";
+import { Response } from "@/components/ai/response";
+import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai/conversation";
+import { EnhancedPromptInput } from "@/components/ai/enhanced-prompt-input";
 import { MultiFileSelector } from "./multiFileSelector";
 import { ProjectNameInput } from "./projectNameInput";
 import { ProjectSelector } from "./projectSelector";
@@ -1244,6 +1246,20 @@ Please try again or use a different approach.`,
     }
   };
 
+  // Enhanced input handler for the new component
+  const handleEnhancedSubmit = async (messageContent: string) => {
+    // Set the message value temporarily so the existing handleSubmit can process it
+    setMessage(messageContent);
+    
+    // Create a synthetic form event
+    const syntheticEvent = {
+      preventDefault: () => {},
+    } as React.FormEvent;
+    
+    // Call the existing handleSubmit logic
+    await handleSubmit(syntheticEvent);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -1258,11 +1274,8 @@ Please try again or use a different approach.`,
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <div 
-        ref={scrollRef} 
-        className="flex-1 overflow-y-auto bg-[#0e0e0e] p-2 pb-8 min-h-0 scrollbar-hidden"
-      >
-        <div className="font-mono text-xs space-y-2 min-h-full">
+      <Conversation className="bg-[#0e0e0e]">
+        <ConversationContent className="font-mono text-xs space-y-2 min-h-full p-2 pb-8">
           {/* Terminal Welcome Text */}
           <div className="text-[#cccccc] space-y-1 mb-4">
             <div>EAC Financial Dashboard - AI Assistant</div>
@@ -1315,10 +1328,12 @@ Please try again or use a different approach.`,
                   <div className={`text-[#4ec9b0] ${isAgentProcessMessage ? 'border-l-4 border-[#4ec9b0] pl-3' : ''}`}>
                     <span className="text-[#4ec9b0]">$ assistant:</span>
                     <div className="ml-1">
-                      <MarkdownRenderer content={msg.content} />
-                    </div>
-                    
-                    {/* Interactive Component */}
+                      <Response
+                        className="text-xs leading-relaxed [&>*]:text-[#cccccc] [&_strong]:text-[#569cd6] [&_strong]:font-bold [&_em]:text-[#4ec9b0] [&_em]:italic [&_code]:bg-[#1e1e1e] [&_code]:text-[#ce9178] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_a]:text-[#007acc] [&_a]:underline [&_h1]:text-[#569cd6] [&_h1]:font-bold [&_h1]:text-sm [&_h2]:text-[#569cd6] [&_h2]:font-bold [&_h2]:text-xs [&_h3]:text-[#4ec9b0] [&_h3]:font-medium [&_h3]:text-xs"
+                      >
+                        {msg.content}
+                      </Response>
+                    </div>                    {/* Interactive Component */}
                     {msg.interactiveComponent && (msg.interactiveComponent.status === 'pending' || msg.interactiveComponent.status === 'completed') && (
                       <div className="mt-3 ml-1">
                         {msg.interactiveComponent.type === 'project_selector' && !msg.interactiveComponent.data?.projectNameInput && (
@@ -2342,8 +2357,9 @@ ${content}
               <span className="ml-1 text-[#858585]">thinking...</span>
             </div>
           )}
-        </div>
-      </div>
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
 
       {/* Pinned Agent Progress Bar */}
       {agentProgress && agentProgress.length > 0 && (
@@ -2374,32 +2390,19 @@ ${content}
         </div>
       )}
 
-      {/* Input area - Now outside the scrollable container */}
-      <div className="bg-[#0e0e0e] p-2 font-mono text-xs flex-shrink-0">
-        <div className="flex items-center">
-          <span className="text-[#007acc]">$ user:</span>
-          <form onSubmit={handleSubmit} className="flex-1 ml-1">
-            <input
-              ref={inputRef}
-              type="text"
-              value={message}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                isAtSessionLimit 
-                  ? "Session limit reached - Start new session to continue..." 
-                  : isLoading 
-                    ? "AI is thinking..." 
-                    : "Ask about your EAC project..."
-              }
-              disabled={isLoading || isAtSessionLimit}
-              className={`w-full bg-transparent border-none outline-none placeholder:text-[#858585] disabled:opacity-50 disabled:cursor-not-allowed caret-[#cccccc] ${
-                isAtSessionLimit ? 'text-[#f48771]' : 'text-[#cccccc]'
-              }`}
-            />
-          </form>
-        </div>
-      </div>
+      {/* Enhanced Input area - Now outside the scrollable container */}
+      <EnhancedPromptInput
+        value={message}
+        onChange={setMessage}
+        onSubmit={handleEnhancedSubmit}
+        placeholder="Ask about your EAC project..."
+        disabled={isLoading}
+        isLoading={isLoading}
+        isAtLimit={isAtSessionLimit}
+        showToolbar={true}
+        multiline={true}
+        className="flex-shrink-0"
+      />
     </div>
   );
 }

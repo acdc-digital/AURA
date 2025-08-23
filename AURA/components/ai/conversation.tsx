@@ -1,109 +1,76 @@
-// AI CONVERSATION COMPONENT - Auto-scrolling chat container with smooth animations
+// AI CONVERSATION COMPONENT - Auto-scrolling chat container with stick-to-bottom behavior
 // /Users/matthewsimon/Projects/AURA/AURA/components/ai/conversation.tsx
 
 "use client";
 
-import { FC, ReactNode, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ArrowDownIcon } from "lucide-react";
+import type { ComponentProps } from "react";
+import { useCallback } from "react";
+import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 
-interface ConversationProps {
-  children: ReactNode;
+export interface ConversationProps extends ComponentProps<typeof StickToBottom> {
   className?: string;
 }
 
-interface ConversationContentProps {
-  children: ReactNode;
+export const Conversation = ({ className, ...props }: ConversationProps) => (
+  <StickToBottom
+    className={cn("relative flex-1 overflow-y-auto", className)}
+    initial="smooth"
+    resize="smooth"
+    role="log"
+    {...props}
+  />
+);
+
+export interface ConversationContentProps extends ComponentProps<typeof StickToBottom.Content> {
   className?: string;
 }
 
-export const Conversation: FC<ConversationProps> = ({ 
-  children, 
-  className 
-}) => {
-  return (
-    <div 
-      className={cn(
-        "flex h-full flex-col overflow-hidden bg-background-primary",
-        className
-      )}
-    >
-      {children}
-    </div>
-  );
-};
+export const ConversationContent = ({
+  className,
+  ...props
+}: ConversationContentProps) => (
+  <StickToBottom.Content
+    className={cn("p-4 space-y-4", className)}
+    {...props}
+  />
+);
 
-export const ConversationContent: FC<ConversationContentProps> = ({ 
-  children, 
-  className 
-}) => {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
+export interface ConversationScrollButtonProps extends ComponentProps<typeof Button> {
+  className?: string;
+}
 
-  // Auto-scroll to bottom when new content is added
-  useEffect(() => {
-    if (shouldAutoScroll && contentRef.current && !isUserScrolling) {
-      const scrollElement = contentRef.current;
-      scrollElement.scrollTop = scrollElement.scrollHeight;
-    }
-  }, [children, shouldAutoScroll, isUserScrolling]);
+export const ConversationScrollButton = ({
+  className,
+  ...props
+}: ConversationScrollButtonProps) => {
+  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
 
-  // Handle scroll events to detect user scrolling
-  const handleScroll = () => {
-    if (!contentRef.current) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
-    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px threshold
-
-    setShouldAutoScroll(isAtBottom);
-    
-    // Detect if user is actively scrolling
-    setIsUserScrolling(true);
-    setTimeout(() => setIsUserScrolling(false), 150);
-  };
-
-  // Scroll to bottom button
-  const scrollToBottom = () => {
-    if (contentRef.current) {
-      contentRef.current.scrollTop = contentRef.current.scrollHeight;
-      setShouldAutoScroll(true);
-    }
-  };
+  const handleScrollToBottom = useCallback(() => {
+    scrollToBottom();
+  }, [scrollToBottom]);
 
   return (
-    <div className="relative flex-1 overflow-hidden">
-      <div
-        ref={contentRef}
-        onScroll={handleScroll}
+    !isAtBottom && (
+      <Button
         className={cn(
-          "h-full overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-background-tertiary hover:scrollbar-thumb-text-quaternary",
+          "absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full shadow-lg",
+          "bg-[#569cd6] hover:bg-[#4a8cc7] text-white border border-[#2d2d2d]",
+          "transition-all duration-200 ease-in-out",
+          "h-10 w-10 p-0",
           className
         )}
+        onClick={handleScrollToBottom}
+        size="icon"
+        type="button"
+        variant="default"
+        aria-label="Scroll to bottom"
+        {...props}
       >
-        {children}
-      </div>
-      
-      {/* Scroll to bottom button */}
-      {!shouldAutoScroll && (
-        <button
-          onClick={scrollToBottom}
-          className="absolute bottom-4 right-4 rounded-full bg-background-secondary p-2 shadow-lg transition-all hover:bg-background-tertiary"
-          aria-label="Scroll to bottom"
-        >
-          <svg 
-            width="16" 
-            height="16" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2"
-            className="text-text-secondary"
-          >
-            <path d="M7 13l3 3 3-3" />
-            <path d="M7 6l3 3 3-3" />
-          </svg>
-        </button>
-      )}
-    </div>
+        <ArrowDownIcon className="size-4" />
+      </Button>
+    )
   );
 };

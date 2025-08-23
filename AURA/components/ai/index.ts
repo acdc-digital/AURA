@@ -5,3 +5,5 @@ export * from "./conversation";
 export * from "./message";
 export * from "./response";
 export * from "./prompt-input";
+export * from "./enhanced-prompt-input";
+export * from "./code-block";
