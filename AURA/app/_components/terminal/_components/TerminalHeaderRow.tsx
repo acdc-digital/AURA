@@ -18,7 +18,7 @@ export function TerminalHeaderRow() {
   } = useTerminalStore();
 
   return (
-    <div className="h-[35px] bg-[#0e639c] flex items-center justify-between px-0 flex-shrink-0 rounded-t-sm">
+    <div className="h-[35px] bg-[#0e639c] flex items-center justify-between px-0 flex-shrink-0 rounded-tl-lg">
       {/* Left side - Tab buttons and terminal tabs */}
       <div className="flex items-center h-full overflow-x-auto">
         {/* Navigation Tab Buttons */}
@@ -26,11 +26,11 @@ export function TerminalHeaderRow() {
           <button
             className={`text-xs h-[35px] px-3 min-w-[70px] flex items-center justify-center ${
               activeTab === 'terminal'
-                ? 'bg-[#094771] text-white rounded-tl-sm'
+                ? 'bg-[#094771] text-white rounded-tl-lg'
                 : 'bg-transparent text-white'
             } ${
               isAuthenticated
-                ? 'hover:bg-[#ffffff20] cursor-pointer'
+                ? 'hover:bg-[#ffffff20] hover:rounded-tl-lg cursor-pointer'
                 : 'opacity-60 cursor-default'
             }`}
             onClick={() => {

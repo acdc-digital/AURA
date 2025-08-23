@@ -9,33 +9,62 @@ import { Navigator } from "./_components/editor/Navigator";
 import { DashSidebar } from "./_components/sidebar/dashSidebar";
 import { Terminal } from "./_components/terminal";
 import { AuthWrapper } from "@/app/_components/auth/AuthWrapper";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useSidebarStore } from "@/lib/store";
 import { useTerminalStore } from "@/lib/store/terminal";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useEffect, useRef } from "react";
-import { ImperativePanelHandle } from "react-resizable-panels";
+import { useState, useCallback } from "react";
 
 export default function HomePage() {
   const { activePanel, setActivePanel } = useSidebarStore();
   const { isCollapsed } = useTerminalStore();
-  const terminalPanelRef = useRef<ImperativePanelHandle>(null);
-  const editorPanelRef = useRef<ImperativePanelHandle>(null);
+  const [terminalHeight, setTerminalHeight] = useState(40); // Height as percentage of viewport
+  const [isResizing, setIsResizing] = useState(false);
 
-  // Programmatically resize panels when collapse state changes
-  useEffect(() => {
-    if (terminalPanelRef.current && editorPanelRef.current) {
-      if (isCollapsed) {
-        // Collapse: terminal to 4.5%, editor to 95.5%
-        terminalPanelRef.current.resize(4.5);
-        editorPanelRef.current.resize(95.5);
-      } else {
-        // Expand: terminal to 30%, editor to 70%
-        terminalPanelRef.current.resize(30);
-        editorPanelRef.current.resize(70);
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (isCollapsed) return;
+    
+    e.preventDefault();
+    setIsResizing(true);
+    
+    const startY = e.clientY;
+    const startHeight = terminalHeight;
+    const viewportHeight = window.innerHeight;
+    const terminalElement = e.currentTarget.parentElement;
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      moveEvent.preventDefault();
+      const deltaY = startY - moveEvent.clientY; // Inverted because we're dragging from top
+      const deltaPercentage = (deltaY / viewportHeight) * 100;
+      const newHeight = Math.min(80, Math.max(15, startHeight + deltaPercentage)); // Min 15%, Max 80%
+      
+      // Update DOM directly for smooth resizing
+      if (terminalElement) {
+        terminalElement.style.height = `${newHeight}vh`;
       }
-    }
-  }, [isCollapsed]);
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      
+      // Update React state only once at the end
+      if (terminalElement) {
+        const currentHeight = parseFloat(terminalElement.style.height);
+        if (!isNaN(currentHeight)) {
+          setTerminalHeight(currentHeight);
+        }
+      }
+      
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  }, [isCollapsed, terminalHeight]);
 
   return (
     <AuthWrapper>
@@ -63,34 +92,32 @@ export default function HomePage() {
             onPanelChange={setActivePanel}
           />
           
-          {/* Main work area with fixed sidebar and resizable terminal */}
-          <div className="flex flex-1 overflow-hidden">
+          {/* Main work area with dashboard and overlaid terminal */}
+          <div className="flex flex-1 overflow-hidden relative">
             {/* Sidebar - Fixed width */}
             <DashSidebar activePanel={activePanel} />
 
-            {/* Editor and Terminal - Resizable vertical split */}
-            <ResizablePanelGroup direction="vertical" className="flex-1">
-              {/* Editor Panel */}
-              <ResizablePanel
-                ref={editorPanelRef}
-                defaultSize={isCollapsed ? 97 : 70}
-                minSize={isCollapsed ? 95 : 30}
-              >
-                <Navigator />
-              </ResizablePanel>
-              
-              {/* Only show ResizableHandle when terminal is expanded */}
-              {!isCollapsed && <ResizableHandle />}
-              
-              {/* Terminal Panel */}
-              <ResizablePanel
-                ref={terminalPanelRef}
-                defaultSize={isCollapsed ? 4.5 : 30}
-                minSize={isCollapsed ? 4.5 : 25}
-              >
-                <Terminal />
-              </ResizablePanel>
-            </ResizablePanelGroup>
+            {/* Dashboard/Editor - Full height */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <Navigator />
+            </div>
+
+            {/* Terminal - Overlaid at bottom when expanded, or thin strip when collapsed */}
+            <div
+              className={`absolute bottom-0 left-[240px] right-0 z-10 ${
+                isCollapsed ? 'h-[35px]' : ''
+              }`}
+              style={!isCollapsed ? { height: `${terminalHeight}vh`, transition: isResizing ? 'none' : 'height 200ms' } : undefined}
+            >
+              {/* Resize handle - only show when expanded */}
+              {!isCollapsed && (
+                <div
+                  className="absolute top-0 left-0 right-0 h-1 cursor-row-resize z-20"
+                  onMouseDown={handleMouseDown}
+                />
+              )}
+              <Terminal />
+            </div>
           </div>
         </div>
 

@@ -6,6 +6,8 @@ export { useFiles } from "./useFiles";
 export { useProjects } from "./useProjects";
 export { useCalendarPosts } from "./useCalendarPosts";
 export { useTrash } from "./useTrash";
+export { useSessionSync } from "./useSessionSync";
+export { useSessionMessages } from "./useSessionMessages";
 export {
   useTerminal,
   useTerminalHistory,

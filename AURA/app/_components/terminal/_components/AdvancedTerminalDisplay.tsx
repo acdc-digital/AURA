@@ -5,11 +5,17 @@
 
 import { useTerminal } from "@/lib/hooks";
 import { useTerminalStore } from "@/lib/store/terminal";
+import { useTerminalSessionStore } from "@/lib/store/terminal-sessions";
+import { useSessionMessages } from "@/lib/hooks/useSessionMessages";
+import { useSessionSync } from "@/lib/hooks/useSessionSync";
 import { api } from "@/convex/_generated/api";
 import { useConvexAuth } from "convex/react";
 import { useAction } from "convex/react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
+import { SessionsPanel } from "../sessions/SessionsPanel";
+import { AgentsPanel } from "../agents/AgentsPanel";
+import { ExtensionsPanel } from "../extensions/ExtensionsPanel";
 
 interface AdvancedTerminalDisplayProps {
   terminalId: string;
@@ -19,6 +25,13 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
   const { isAuthenticated } = useConvexAuth();
   const { saveCommand } = useTerminal();
   const sendMessage = useAction(api.orchestrator.sendMessage);
+  const { sessions } = useTerminalSessionStore();
+  const {
+    formattedMessages,
+    isLoading: isLoadingMessages,
+    activeSessionId
+  } = useSessionMessages();
+  const { createSessionWithSync } = useSessionSync();
   
   const {
     terminals,
@@ -36,8 +49,21 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [chatMode, setChatMode] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [activeSubTab, setActiveSubTab] = useState<'chat' | 'sessions' | 'agents' | 'extensions'>('chat');
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
+  
+  // Handler for creating new session
+  const handleCreateNewSession = async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      await createSessionWithSync(); // This will auto-generate title and sync with Convex
+      setActiveSubTab('chat'); // Switch to chat tab automatically
+    } catch (error) {
+      console.error('Failed to create new session:', error);
+    }
+  };
   
   // Auto-scroll to bottom when new content is added, but avoid disrupting input
   useEffect(() => {
@@ -99,30 +125,21 @@ Type 'exit' or 'quit' to return to terminal mode.`);
           return;
         }
         
-        // Send message to orchestrator
+        // Send message to orchestrator - it will handle saving both user and assistant messages
         try {
-          // Create session ID if we don't have one
-          const currentSessionId = sessionId || `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          if (!sessionId) {
+          // Use the active session ID from the session store
+          const currentSessionId = activeSessionId || `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          if (!activeSessionId) {
             setSessionId(currentSessionId);
           }
           
-          const response = await sendMessage({
+          await sendMessage({
             message: command,
             sessionId: currentSessionId,
           });
           
-          // Display orchestrator response
-          addToBuffer(terminalId, "");
-          addToBuffer(terminalId, `🤖 Orchestrator: ${response.response}`);
-          addToBuffer(terminalId, "");
-          
-          // Show token usage info
-          if (response.tokenCount > 0) {
-            addToBuffer(terminalId, `💡 Usage: ${response.inputTokens} in + ${response.outputTokens} out = ${response.tokenCount} tokens (~$${response.estimatedCost.toFixed(4)})`);
-          }
-          
-          // Ensure scroll to bottom after response
+          // Messages are already saved by the orchestrator action
+          // Just ensure scroll to bottom after response
           setTimeout(() => {
             if (outputRef.current) {
               outputRef.current.scrollTop = outputRef.current.scrollHeight;
@@ -211,7 +228,7 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
     } finally {
       setProcessing(terminalId, false);
     }
-  }, [terminal, terminalId, commandHistory, addToBuffer, clearBuffer, setProcessing, addToHistory, saveCommand, isAuthenticated, chatMode, sendMessage, sessionId, setChatMode, setSessionId]);
+  }, [terminal, terminalId, commandHistory, addToBuffer, clearBuffer, setProcessing, addToHistory, saveCommand, isAuthenticated, chatMode, sendMessage, setChatMode, setSessionId, activeSessionId]);
 
   const handleKeyDown = useCallback(async (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -275,76 +292,155 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
 
   return (
     <div className="flex-1 bg-[#0e0e0e] flex flex-col h-full overflow-hidden">
-      {/* Terminal header - fixed at top */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#1f1f1f] flex-shrink-0 bg-[#0e0e0e]">
-        <div className="flex items-center space-x-2">
-          <div className="text-xs text-[#cccccc] font-medium">{terminal.title}</div>
-          {terminal.isProcessing && (
-            <Loader2 className="w-3 h-3 text-[#0ea5e9] animate-spin" />
-          )}
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="text-xs text-[#858585]">{terminal.currentDirectory}</div>
-          <div className="text-xs text-[#858585]">
-            {terminal.process.status === 'idle' ? 'Ready' : terminal.process.status}
-          </div>
+      {/* Secondary header row with sub-tabs */}
+      <div className="flex items-center px-3 py-1 border-b border-[#1f1f1f] flex-shrink-0 bg-[#181818]">
+        <div className="flex items-center space-x-1">
+          <button
+            className={`text-xs px-2 py-1 transition-colors ${
+              activeSubTab === 'chat'
+                ? 'text-[#7dd3fc]'
+                : 'text-[#cccccc] hover:text-white'
+            }`}
+            onClick={() => setActiveSubTab('chat')}
+          >
+            Chat
+          </button>
+          <button
+            className={`text-xs px-2 py-1 transition-colors ${
+              activeSubTab === 'sessions'
+                ? 'text-[#7dd3fc]'
+                : 'text-[#cccccc] hover:text-white'
+            }`}
+            onClick={() => setActiveSubTab('sessions')}
+          >
+            Sessions <span className="text-[#4ade80]">{sessions.length}</span>
+          </button>
+          <button
+            className={`text-xs px-2 py-1 transition-colors ${
+              activeSubTab === 'agents'
+                ? 'text-[#7dd3fc]'
+                : 'text-[#cccccc] hover:text-white'
+            }`}
+            onClick={() => setActiveSubTab('agents')}
+          >
+            Agents
+          </button>
+          <button
+            className={`text-xs px-2 py-1 transition-colors ${
+              activeSubTab === 'extensions'
+                ? 'text-[#7dd3fc]'
+                : 'text-[#cccccc] hover:text-white'
+            }`}
+            onClick={() => setActiveSubTab('extensions')}
+          >
+            Extensions
+          </button>
+          
+          {/* New Session Button */}
+          <button
+            className="ml-2 p-1 text-xs border border-[#454545] bg-transparent hover:bg-[#3d3d3d] text-[#858585] hover:text-[#cccccc] rounded transition-colors"
+            onClick={handleCreateNewSession}
+            title="New Session"
+          >
+            <Plus className="w-3 h-3" />
+          </button>
         </div>
       </div>
       
-      {/* Terminal output - scrollable area */}
-      <div 
-        ref={outputRef}
-        className="flex-1 px-3 py-3 overflow-y-auto font-mono text-xs leading-relaxed scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent min-h-0"
-      >
-        {terminal.buffer.map((line, index) => (
-          <div key={index} className="text-[#cccccc] whitespace-pre-wrap mb-0.5">
-            {line}
+      {/* Content Area - conditionally render based on active sub-tab */}
+      {activeSubTab === 'chat' && (
+        <>
+          {/* Terminal output - scrollable area */}
+          <div
+            ref={outputRef}
+            className="flex-1 px-3 py-3 overflow-y-auto font-mono text-xs leading-relaxed scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent min-h-0"
+          >
+            {chatMode ? (
+              // Show session messages when in chat mode
+              <>
+                {isLoadingMessages ? (
+                  <div className="text-[#858585] flex items-center justify-center py-4">
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Loading chat history...
+                  </div>
+                ) : (
+                  <>
+                    {formattedMessages.length === 0 ? (
+                      <div className="text-[#858585] py-4">
+                        🤖 Welcome to AURA Chat!
+                        <br />
+                        <br />
+                        Connected to Orchestrator Agent powered by Claude 3.5 Sonnet.
+                        <br />
+                        Ready to help with development tasks, planning, and guidance.
+                        <br />
+                        <br />
+                        Type your message below to get started.
+                        <br />
+                        Type &apos;exit&apos; or &apos;quit&apos; to return to terminal mode.
+                      </div>
+                    ) : (
+                      formattedMessages.map((line, index) => (
+                        <div key={index} className="text-[#cccccc] whitespace-pre-wrap mb-0.5">
+                          {line}
+                        </div>
+                      ))
+                    )}
+                  </>
+                )}
+              </>
+            ) : (
+              // Show terminal buffer when in terminal mode
+              terminal.buffer.map((line, index) => (
+                <div key={index} className="text-[#cccccc] whitespace-pre-wrap mb-0.5">
+                  {line}
+                </div>
+              ))
+            )}
+          </div>          {/* Current input line - fixed at bottom */}
+          <div className="flex items-center space-x-2 px-3 py-2 border-t border-[#1f1f1f] flex-shrink-0 bg-[#0e0e0e] min-h-[36px]">
+            <span className="text-[#0ea5e9] font-medium flex-shrink-0 text-xs">
+              {chatMode ? "chat>" : `${terminal.currentDirectory} $`}
+            </span>
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1 bg-transparent text-[#cccccc] outline-none font-mono text-xs leading-normal min-h-[18px]"
+              placeholder={chatMode ? "Ask anything..." : "Type a command..."}
+              disabled={terminal.isProcessing}
+            />
+            {terminal.isProcessing && (
+              <Loader2 className="w-3 h-3 text-[#0ea5e9] animate-spin flex-shrink-0" />
+            )}
           </div>
-        ))}
-      </div>
-        
-      {/* Current input line - fixed at bottom */}
-      <div className="flex items-center space-x-2 px-3 py-2 border-t border-[#1f1f1f] flex-shrink-0 bg-[#0e0e0e] min-h-[36px]">
-        <span className="text-[#0ea5e9] font-medium flex-shrink-0 text-xs">
-          {chatMode ? "chat>" : `${terminal.currentDirectory} $`}
-        </span>
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="flex-1 bg-transparent text-[#cccccc] outline-none font-mono text-xs leading-normal min-h-[18px]"
-          placeholder={chatMode ? "Ask anything..." : "Type a command..."}
-          disabled={terminal.isProcessing}
-        />
-        {terminal.isProcessing && (
-          <Loader2 className="w-3 h-3 text-[#0ea5e9] animate-spin flex-shrink-0" />
-        )}
-      </div>
-      
-      {/* Status bar */}
-      <div className="px-3 py-1 border-t border-[#1f1f1f] flex items-center justify-between text-xs text-[#858585] bg-[#1a1a1a] flex-shrink-0">
-        <div className="flex items-center space-x-4">
-          <span>Commands: {commandHistory.length}</span>
-          <span>Lines: {terminal.buffer.length}</span>
-          {chatMode && <span className="text-[#0ea5e9]">💬 Chat Mode</span>}
-        </div>
-        <div className="flex items-center space-x-2">
-          {chatMode ? (
-            <>
-              <span>Type &apos;exit&apos; to leave chat</span>
-              <span>Ask anything</span>
-            </>
-          ) : (
-            <>
-              <span>⌘K to clear</span>
-              <span>↑↓ for history</span>
-              <span>Type &apos;help&apos; for commands</span>
-            </>
-          )}
-        </div>
-      </div>
+          
+          {/* Status bar */}
+          <div className="px-3 py-1 border-t border-[#1f1f1f] flex items-center justify-between text-xs text-[#858585] bg-[#1a1a1a] flex-shrink-0">
+            <div className="flex items-center space-x-4">
+              <span>Commands: {commandHistory.length}</span>
+              <span>Lines: {terminal.buffer.length}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              {chatMode ? (
+                <span className="text-[#0ea5e9]">Chat Mode</span>
+              ) : (
+                <>
+                  <span>⌘K to clear</span>
+                  <span>↑↓ for history</span>
+                  <span>Type &apos;help&apos; for commands</span>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {activeSubTab === 'sessions' && <SessionsPanel onSessionSelected={() => setActiveSubTab('chat')} />}
+      {activeSubTab === 'agents' && <AgentsPanel />}
+      {activeSubTab === 'extensions' && <ExtensionsPanel />}
     </div>
   );
 }

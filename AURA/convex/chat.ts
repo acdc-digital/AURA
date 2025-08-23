@@ -108,6 +108,123 @@ export const getMessages = query({
   },
 });
 
+// Session Management Functions
+
+// Create a new chat session
+export const createSession = mutation({
+  args: {
+    sessionId: v.string(),
+    title: v.optional(v.string()),
+    userId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const sessionCount = await ctx.db
+      .query("chatSessions")
+      .filter((q) => args.userId ? q.eq(q.field("userId"), args.userId) : q.eq(q.field("userId"), undefined))
+      .collect()
+      .then(sessions => sessions.length);
+
+    return await ctx.db.insert("chatSessions", {
+      sessionId: args.sessionId,
+      userId: args.userId,
+      title: args.title || `Terminal Chat ${sessionCount + 1}`,
+      totalTokens: 0,
+      totalInputTokens: 0,
+      totalOutputTokens: 0,
+      totalCost: 0,
+      messageCount: 0,
+      isActive: true,
+      isDeleted: false,
+      maxTokensAllowed: 180000,
+      createdAt: Date.now(),
+      lastActivity: Date.now(),
+      preview: '',
+    });
+  },
+});
+
+// Get user sessions
+export const getUserSessions = query({
+  args: { userId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    if (!args.userId) return [];
+    
+    return await ctx.db
+      .query("chatSessions")
+      .withIndex("by_user_not_deleted", (q) =>
+        q.eq("userId", args.userId).eq("isDeleted", false)
+      )
+      .order("desc")
+      .collect();
+  },
+});
+
+// Update session metadata
+export const updateSession = mutation({
+  args: {
+    sessionId: v.string(),
+    updates: v.object({
+      title: v.optional(v.string()),
+      isActive: v.optional(v.boolean()),
+      lastActivity: v.optional(v.number()),
+      preview: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("chatSessions")
+      .withIndex("by_session_id", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+      
+    if (session) {
+      await ctx.db.patch(session._id, {
+        ...args.updates,
+        lastActivity: Date.now(),
+      });
+    }
+  },
+});
+
+// Delete session (soft delete)
+export const deleteSession = mutation({
+  args: { sessionId: v.string() },
+  handler: async (ctx, args) => {
+    // Soft delete session
+    const session = await ctx.db
+      .query("chatSessions")
+      .withIndex("by_session_id", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+      
+    if (session) {
+      await ctx.db.patch(session._id, {
+        isDeleted: true,
+        lastActivity: Date.now(),
+      });
+    }
+    
+    // Mark associated messages as temporary for cleanup
+    const messages = await ctx.db
+      .query("chatMessages")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+      
+    for (const message of messages) {
+      await ctx.db.patch(message._id, { isTemporary: true });
+    }
+  },
+});
+
+// Get session by ID
+export const getSession = query({
+  args: { sessionId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("chatSessions")
+      .withIndex("by_session_id", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+  },
+});
+
 // Get recent messages for current user
 export const getRecentMessages = query({
   args: {
