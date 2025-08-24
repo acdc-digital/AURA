@@ -8,6 +8,9 @@
       "env": {
         "CONVEX_DEPLOYMENT": "dev:exuberant-starfish-100"
       }
+    },
+    "shadcn": {
+      "url": "https://www.shadcn.io/api/mcp"
     }
   }
 }

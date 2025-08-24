@@ -12,11 +12,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.60.0",
     "@clerk/clerk-react": "^5.25.0",
     "@clerk/nextjs": "^6.31.1",
+    "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "@tiptap/extension-character-count": "^3.2.0",
     "@tiptap/extension-image": "^3.2.0",
     "@tiptap/extension-link": "^3.2.0",
@@ -42,6 +45,7 @@
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^3.0.4",
     "react-syntax-highlighter": "^15.6.3",
+    "rehype-highlight": "^7.0.2",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",

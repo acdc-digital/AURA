@@ -20,6 +20,12 @@ AURA is a modern web application built with a pnpm workspace monorepo structure 
 - Confirm, then write code!
 - Always write correct, up to date, bug free, fully functional and working, secure, performant and efficient code
 
+## UI Design Preferences
+- **NO TOOLTIPS**: Never use tooltips - they are disliked and should be avoided entirely
+- **NO FOCUS RINGS**: Never add focus rings or focus:ring classes - disable them with focus:outline-none only
+- Use terminal-style interfaces with tight, compact design
+- Prefer thin, subtle icons over bold or prominent elements
+
 ## Key Principles
 - Focus on readability over being performant
 - Fully implement all requested functionality

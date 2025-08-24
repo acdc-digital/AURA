@@ -3,15 +3,16 @@
 
 "use client";
 
-import { FC, useCallback, useEffect, useState } from "react";
+import { FC, useCallback, useEffect, useState, useMemo } from "react";
 import { useConvexAuth } from "convex/react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 // UI Components
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SimpleAutoScrollTest } from "./SimpleAutoScrollTest";
+import { TerminalMessage } from "../../../terminal/chat/_components/TerminalMessage";
 
 // Hooks
 import { useUser } from "@/lib/hooks/useUser";
@@ -37,12 +38,14 @@ export const OrchestratorAgent: FC<OrchestratorAgentProps> = ({
   const currentSessionId = sessionId || `orchestrator-${Date.now()}`;
   
   // Convex mutations and queries
+  const sendToOrchestrator = useAction(api.orchestrator.sendMessage);
   const addMessage = useMutation(api.chat.addMessage);
-  const sendToOrchestrator = useMutation(api.orchestrator.sendMessage);
-  const messages = useQuery(api.chat.getMessages, {
+  const messagesData = useQuery(api.orchestrator.getConversationHistory, {
     sessionId: currentSessionId,
-    limit: 100,
-  }) ?? [];
+  });
+  
+  // Memoize messages to prevent unnecessary re-renders
+  const messages = useMemo(() => messagesData ?? [], [messagesData]);
 
   // Handle session update
   useEffect(() => {
@@ -100,14 +103,6 @@ export const OrchestratorAgent: FC<OrchestratorAgentProps> = ({
     }
   };
 
-  // Format timestamp
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
   // Loading state
   if (authLoading) {
     return (
@@ -138,9 +133,9 @@ export const OrchestratorAgent: FC<OrchestratorAgentProps> = ({
         </p>
       </div>
 
-      {/* Messages Area */}
-      <ScrollArea className="flex-1 px-4">
-        <div className="space-y-4 py-4">
+      {/* Messages Area with Simple Auto-scroll Test */}
+      <SimpleAutoScrollTest messages={messages} className="flex-1 min-h-0">
+        <div className="p-4 space-y-4">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="mb-4 text-lg font-medium">
@@ -155,51 +150,22 @@ export const OrchestratorAgent: FC<OrchestratorAgentProps> = ({
           )}
 
           {messages.map((message) => (
-            <div 
-              key={message._id} 
-              className={`flex gap-3 ${
-                message.role === "user" ? "justify-end" : "justify-start"
-              }`}
+            <div
+              key={message._id}
+              className="mb-4"
             >
-              {/* Avatar */}
-              <div className={`flex-shrink-0 ${message.role === "user" ? "order-2" : ""}`}>
-                <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium text-white ${
-                  message.role === "user" ? "bg-blue-500" :
-                  message.role === "assistant" ? "bg-green-500" :
-                  "bg-gray-500"
-                }`}>
-                  {message.role === "user" ? (user?.name?.[0]?.toUpperCase() || "U") :
-                   message.role === "assistant" ? "AI" : "SYS"}
-                </div>
-              </div>
-
-              {/* Message Content */}
-              <div className={`flex-1 ${message.role === "user" ? "order-1" : ""}`}>
-                <div className={`rounded-lg p-3 max-w-md ${
-                  message.role === "user" ? 
-                    "bg-blue-500 text-white ml-auto" : 
-                    "bg-muted text-foreground"
-                }`}>
-                  <div className="text-sm whitespace-pre-wrap">
-                    {message.content}
-                  </div>
-                  
-                  {/* Metadata */}
-                  <div className="mt-2 flex items-center gap-2 text-xs opacity-70">
-                    <span>{formatTime(message.createdAt)}</span>
-                    {message.role === "assistant" && (message.inputTokens || message.outputTokens) && (
-                      <span>
-                        • {message.inputTokens || 0}↑ {message.outputTokens || 0}↓
-                        {message.estimatedCost && ` • $${message.estimatedCost.toFixed(4)}`}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <TerminalMessage
+                message={message}
+                isLast={false}
+                onRegenerate={() => {
+                  // TODO: Implement regeneration logic
+                  console.log('Regenerate message:', message._id);
+                }}
+              />
             </div>
           ))}
         </div>
-      </ScrollArea>
+      </SimpleAutoScrollTest>
 
       {/* Input Area */}
       <form onSubmit={handleSubmit} className="border-t border-border p-4">

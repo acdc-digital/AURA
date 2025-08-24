@@ -81,6 +81,7 @@ export function useSessionMessages() {
   
   return {
     messages: messages || [],
+    rawMessages: messages || [], // Add raw messages for action handling
     formattedMessages,
     isLoading: messages === undefined,
     addUserMessage,

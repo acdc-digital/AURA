@@ -174,22 +174,22 @@ export interface ResponseProps extends HTMLAttributes<HTMLDivElement> {
 
 const components: Options["components"] = {
   ol: ({ children, className, ...props }) => (
-    <ol className={cn("ml-4 list-outside list-decimal", className)} {...props}>
+    <ol className={cn("ml-3 list-outside list-decimal", className)} {...props}>
       {children}
     </ol>
   ),
   li: ({ children, className, ...props }) => (
-    <li className={cn("py-1", className)} {...props}>
+    <li className={cn("py-0.5", className)} {...props}>
       {children}
     </li>
   ),
   ul: ({ children, className, ...props }) => (
-    <ul className={cn("ml-4 list-outside list-disc", className)} {...props}>
+    <ul className={cn("ml-3 list-outside list-disc", className)} {...props}>
       {children}
     </ul>
   ),
   hr: ({ className, ...props }) => (
-    <hr className={cn("my-6 border-border", className)} {...props} />
+    <hr className={cn("my-3 border-border", className)} {...props} />
   ),
   strong: ({ children, className, ...props }) => (
     <span className={cn("font-semibold", className)} {...props}>
@@ -208,7 +208,7 @@ const components: Options["components"] = {
   ),
   h1: ({ children, className, ...props }) => (
     <h1
-      className={cn("mt-6 mb-2 font-semibold text-3xl", className)}
+      className={cn("mt-3 mb-1 font-semibold text-base", className)}
       {...props}
     >
       {children}
@@ -216,37 +216,37 @@ const components: Options["components"] = {
   ),
   h2: ({ children, className, ...props }) => (
     <h2
-      className={cn("mt-6 mb-2 font-semibold text-2xl", className)}
+      className={cn("mt-3 mb-1 font-semibold text-base", className)}
       {...props}
     >
       {children}
     </h2>
   ),
   h3: ({ children, className, ...props }) => (
-    <h3 className={cn("mt-6 mb-2 font-semibold text-xl", className)} {...props}>
+    <h3 className={cn("mt-2 mb-1 font-semibold text-sm", className)} {...props}>
       {children}
     </h3>
   ),
   h4: ({ children, className, ...props }) => (
-    <h4 className={cn("mt-6 mb-2 font-semibold text-lg", className)} {...props}>
+    <h4 className={cn("mt-2 mb-1 font-semibold text-sm", className)} {...props}>
       {children}
     </h4>
   ),
   h5: ({ children, className, ...props }) => (
     <h5
-      className={cn("mt-6 mb-2 font-semibold text-base", className)}
+      className={cn("mt-2 mb-1 font-semibold text-sm", className)}
       {...props}
     >
       {children}
     </h5>
   ),
   h6: ({ children, className, ...props }) => (
-    <h6 className={cn("mt-6 mb-2 font-semibold text-sm", className)} {...props}>
+    <h6 className={cn("mt-2 mb-1 font-semibold text-sm", className)} {...props}>
       {children}
     </h6>
   ),
   table: ({ children, className, ...props }) => (
-    <div className="my-4 overflow-x-auto">
+    <div className="my-2 overflow-x-auto">
       <table
         className={cn("w-full border-collapse border border-border", className)}
         {...props}
@@ -272,21 +272,21 @@ const components: Options["components"] = {
   ),
   th: ({ children, className, ...props }) => (
     <th
-      className={cn("px-4 py-2 text-left font-semibold text-sm", className)}
+      className={cn("px-2 py-1 text-left font-semibold text-xs", className)}
       {...props}
     >
       {children}
     </th>
   ),
   td: ({ children, className, ...props }) => (
-    <td className={cn("px-4 py-2 text-sm", className)} {...props}>
+    <td className={cn("px-2 py-1 text-xs", className)} {...props}>
       {children}
     </td>
   ),
   blockquote: ({ children, className, ...props }) => (
     <blockquote
       className={cn(
-        "my-4 border-muted-foreground/30 border-l-4 pl-4 text-muted-foreground italic",
+        "my-2 border-muted-foreground/30 border-l-2 pl-3 text-muted-foreground italic text-xs",
         className
       )}
       {...props}
@@ -304,7 +304,7 @@ const components: Options["components"] = {
     return (
       <code
         className={cn(
-          "rounded bg-muted px-1.5 py-0.5 font-mono text-sm",
+          "rounded bg-muted px-1 py-0.5 font-mono text-xs",
           className
         )}
         {...props}
@@ -334,7 +334,7 @@ const components: Options["components"] = {
 
     return (
       <CodeBlock
-        className={cn("my-4 h-auto", className)}
+        className={cn("my-2 h-auto", className)}
         code={code}
         language={language}
       >
@@ -367,7 +367,7 @@ export const Response = memo(
     return (
       <div
         className={cn(
-          "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+          "size-full text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
           className
         )}
         {...props}

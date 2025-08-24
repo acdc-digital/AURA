@@ -9,11 +9,12 @@ import { useTerminalSessionStore } from "@/lib/store/terminal-sessions";
 import { useSessionMessages } from "@/lib/hooks/useSessionMessages";
 import { useSessionSync } from "@/lib/hooks/useSessionSync";
 import { EnhancedPromptInput } from "@/components/ai/enhanced-prompt-input";
+import { TerminalMessage } from "../chat/_components/TerminalMessage";
 import { api } from "@/convex/_generated/api";
 import { useConvexAuth } from "convex/react";
 import { useAction } from "convex/react";
 import { Loader2, Plus } from "lucide-react";
-import { KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SessionsPanel } from "../sessions/SessionsPanel";
 import { AgentsPanel } from "../agents/AgentsPanel";
 import { ExtensionsPanel } from "../extensions/ExtensionsPanel";
@@ -29,6 +30,7 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
   const { sessions } = useTerminalSessionStore();
   const {
     formattedMessages,
+    rawMessages,
     isLoading: isLoadingMessages,
     activeSessionId
   } = useSessionMessages();
@@ -47,13 +49,26 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
   
   // Input state
   const [input, setInput] = useState("");
-  const [historyIndex, setHistoryIndex] = useState(-1);
   const [chatMode, setChatMode] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'chat' | 'sessions' | 'agents' | 'extensions'>('chat');
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   
+  // Handler for regenerating the last assistant message
+  const handleRegenerate = useCallback(async () => {
+    if (!isAuthenticated || !activeSessionId) return;
+    
+    try {
+      await sendMessage({
+        message: "Please regenerate your last response with a different approach or additional details.",
+        sessionId: activeSessionId,
+      });
+    } catch (error) {
+      console.error('Failed to regenerate message:', error);
+    }
+  }, [isAuthenticated, activeSessionId, sendMessage]);
+
   // Handler for creating new session
   const handleCreateNewSession = async () => {
     if (!isAuthenticated) return;
@@ -66,18 +81,293 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
     }
   };
   
-  // Auto-scroll to bottom when new content is added, but avoid disrupting input
+  // State for auto-scroll
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [isProgrammaticScroll, setIsProgrammaticScroll] = useState(false);
+  const [isStreamingActive, setIsStreamingActive] = useState(false);
+
+  // Detect if streaming is currently active and handle auto-scroll states
   useEffect(() => {
-    if (outputRef.current && !inputRef.current?.matches(':focus')) {
-      // Only auto-scroll if input is not focused to prevent jumping
-      const scrollContainer = outputRef.current;
-      const shouldScroll = scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 50;
-      
-      if (shouldScroll) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    const streamingAssistant = rawMessages.find(msg =>
+      msg.role === 'assistant' && !msg.outputTokens && msg.content
+    );
+    
+    const lastMessage = rawMessages[rawMessages.length - 1];
+    const isNewUserMessage = lastMessage?.role === 'user';
+    
+    const wasStreaming = isStreamingActive;
+    const nowStreaming = !!streamingAssistant;
+    
+    setIsStreamingActive(nowStreaming);
+    
+    // If streaming just stopped, disable auto-scroll to let user read
+    if (wasStreaming && !nowStreaming) {
+      console.log('📖 Streaming completed, disabling auto-scroll for reading');
+      setIsUserScrolling(true); // Prevent auto-scroll until next user input
+    }
+    
+    // If new user message was added, prepare for next response
+    if (isNewUserMessage && !nowStreaming) {
+      console.log('💬 New user message detected, enabling auto-scroll for next response');
+      setIsUserScrolling(false);
+    }
+    
+    // If new streaming started, ensure auto-scroll is enabled
+    if (!wasStreaming && nowStreaming) {
+      console.log('🎬 New streaming started, enabling auto-scroll');
+      setIsUserScrolling(false);
+    }
+  }, [rawMessages, isStreamingActive]);
+
+  // Centralized scroll function to ensure consistent behavior and prevent user scroll detection
+  const scrollToBottomSafely = useCallback((reason: string) => {
+    if (!outputRef.current || isUserScrolling) {
+      console.log(`❌ Skipping scroll (${reason}): ${!outputRef.current ? 'no ref' : 'user scrolling'}`);
+      return;
+    }
+
+    console.log(`⬇️ Scrolling to bottom: ${reason}`);
+    setIsProgrammaticScroll(true);
+    
+    requestAnimationFrame(() => {
+      if (outputRef.current) {
+        outputRef.current.scrollTop = outputRef.current.scrollHeight;
+      }
+      // Use double RAF to ensure scroll event is processed before clearing flag
+      requestAnimationFrame(() => {
+        setIsProgrammaticScroll(false);
+      });
+    });
+  }, [isUserScrolling]);
+
+  // Ensure scroll container is at bottom when first created
+  useEffect(() => {
+    if (!outputRef.current) return;
+    
+    const element = outputRef.current;
+    
+    setIsProgrammaticScroll(true);
+    element.scrollTop = element.scrollHeight;
+    setTimeout(() => setIsProgrammaticScroll(false), 100);
+  }, []); // Run once on mount
+
+  // Debug: Monitor messages for changes
+  useEffect(() => {
+    console.log('🔍 Messages changed:', {
+      count: rawMessages.length,
+      messages: rawMessages.map((msg, idx) => ({
+        index: idx,
+        role: msg.role,
+        contentLength: msg.content?.length || 0,
+        hasTokens: !!(msg.outputTokens || msg.inputTokens || msg.tokenCount),
+        isStreaming: !msg.outputTokens && msg.role === 'assistant',
+        contentPreview: msg.content?.slice(0, 50) + (msg.content?.length > 50 ? '...' : '')
+      }))
+    });
+
+    // Check if any assistant message is actively growing
+    const streamingAssistant = rawMessages.find(msg =>
+      msg.role === 'assistant' && !msg.outputTokens && msg.content
+    );
+
+    if (streamingAssistant) {
+      console.log('🎯 Found streaming assistant message:', {
+        contentLength: streamingAssistant.content?.length,
+        preview: streamingAssistant.content?.slice(-100), // Last 100 chars
+        shouldScroll: !isUserScrolling
+      });
+
+      // Force scroll for streaming response
+      if (!isUserScrolling) {
+        scrollToBottomSafely('streaming response detected');
       }
     }
-  }, [terminal?.buffer]);
+  }, [rawMessages, isUserScrolling, scrollToBottomSafely]);  // Enhanced streaming detection - watch for content changes in assistant messages
+  useEffect(() => {
+    if (!outputRef.current || isUserScrolling) return;
+
+    const element = outputRef.current;
+    
+    // Check if any assistant message is currently streaming (no token counts)
+    const hasStreamingMessage = rawMessages.some(msg =>
+      msg.role === "assistant" &&
+      (msg.tokenCount === undefined || msg.tokenCount === 0) &&
+      (msg.inputTokens === undefined || msg.inputTokens === 0) &&
+      (msg.outputTokens === undefined || msg.outputTokens === 0)
+    );
+    
+    if (hasStreamingMessage) {
+      scrollToBottomSafely('streaming message detected');
+    }
+  }, [rawMessages, isUserScrolling, scrollToBottomSafely]); // Watch for any changes in rawMessages
+
+  // Convex-reactive auto-scroll - triggered by message array updates (following Convex docs)
+  useEffect(() => {
+    if (!outputRef.current || isUserScrolling) return;
+
+    const element = outputRef.current;
+    
+    // Programmatic scroll - mark it to avoid triggering user scroll detection
+    setIsProgrammaticScroll(true);
+    
+    requestAnimationFrame(() => {
+      element.scrollTop = element.scrollHeight;
+      
+      // Clear programmatic flag after scroll completes
+      setTimeout(() => setIsProgrammaticScroll(false), 50);
+    });
+  }, [rawMessages, isUserScrolling]); // React to any changes in rawMessages object, not just length
+
+    // Enhanced MutationObserver for streaming content changes within messages
+  useEffect(() => {
+    if (!outputRef.current || isUserScrolling) return;
+
+    const element = outputRef.current;
+    
+    const observer = new MutationObserver((mutations) => {
+      if (!isUserScrolling && !isProgrammaticScroll) {
+        // Check if any mutations are text changes in assistant messages
+        const hasTextChanges = mutations.some(mutation => {
+          // Look for text changes or child additions within message containers
+          return (
+            mutation.type === 'childList' ||
+            mutation.type === 'characterData' ||
+            (mutation.target as HTMLElement)?.closest?.('[data-role="assistant"]')
+          );
+        });
+
+        if (hasTextChanges) {
+          console.log('📝 DOM content changed during streaming, scrolling immediately');
+          setIsProgrammaticScroll(true);
+          
+          requestAnimationFrame(() => {
+            element.scrollTop = element.scrollHeight;
+            requestAnimationFrame(() => {
+              setIsProgrammaticScroll(false);
+            });
+          });
+        }
+      }
+    });
+
+    // Watch for all changes in the terminal output area
+    observer.observe(element, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    return () => observer.disconnect();
+  }, [isUserScrolling, isProgrammaticScroll]);
+
+  // High-frequency polling for active streaming content (as backup to MutationObserver)
+  useEffect(() => {
+    if (!outputRef.current || isUserScrolling) return;
+
+    const element = outputRef.current;
+    let lastScrollHeight = element.scrollHeight;
+
+    // Check if we have a streaming assistant message
+    const streamingAssistant = rawMessages.find(msg =>
+      msg.role === 'assistant' && !msg.outputTokens && msg.content
+    );
+
+    if (streamingAssistant) {
+      console.log('🎬 Starting high-frequency scroll monitoring for streaming response');
+
+      const intervalId = setInterval(() => {
+        if (!outputRef.current || isUserScrolling || isProgrammaticScroll) return;
+
+        const currentScrollHeight = outputRef.current.scrollHeight;
+        
+        // If content height has grown, scroll to bottom
+        if (currentScrollHeight > lastScrollHeight) {
+          console.log('⚡ Height increased during streaming, force scrolling');
+          setIsProgrammaticScroll(true);
+          
+          requestAnimationFrame(() => {
+            if (outputRef.current) {
+              outputRef.current.scrollTop = outputRef.current.scrollHeight;
+            }
+            requestAnimationFrame(() => {
+              setIsProgrammaticScroll(false);
+            });
+          });
+          
+          lastScrollHeight = currentScrollHeight;
+        }
+      }, 50); // Check every 50ms during streaming
+
+      return () => {
+        console.log('🛑 Stopping high-frequency scroll monitoring');
+        clearInterval(intervalId);
+      };
+    }
+
+    return undefined;
+  }, [rawMessages, isUserScrolling, isProgrammaticScroll]);
+
+  // Handle user scroll detection - but ignore programmatic scrolls
+  useEffect(() => {
+    if (!outputRef.current) return;
+
+    const element = outputRef.current;
+    let scrollTimeout: NodeJS.Timeout;
+    let lastScrollTop = 0;
+
+    const handleUserScroll = () => {
+      const currentScrollTop = element.scrollTop;
+      const maxScroll = element.scrollHeight - element.clientHeight;
+      const isAtBottom = Math.abs(currentScrollTop - maxScroll) < 5;
+      
+      // Ignore if this is a programmatic scroll
+      if (isProgrammaticScroll) {
+        console.log('⚡ Ignoring programmatic scroll event');
+        return;
+      }
+      
+      // Only treat as user scroll if they scrolled UP (away from bottom)
+      // or if they're scrolling to a position that's not at the bottom
+      const isUserScrollingUp = currentScrollTop < lastScrollTop;
+      const isUserScrollingAwayFromBottom = !isAtBottom && currentScrollTop < maxScroll - 10;
+      
+      if (isUserScrollingUp || isUserScrollingAwayFromBottom) {
+        console.log('👆 User manually scrolled UP/AWAY, pausing auto-scroll');
+        setIsUserScrolling(true);
+        
+        // Only auto-resume during active streaming, not after completion
+        if (isStreamingActive) {
+          console.log('📡 Streaming active - will resume auto-scroll after 3s timeout');
+          clearTimeout(scrollTimeout);
+          scrollTimeout = setTimeout(() => {
+            console.log('⏰ Resuming auto-scroll after 3s timeout (streaming active)');
+            setIsUserScrolling(false);
+          }, 3000);
+        } else {
+          console.log('📖 Streaming complete - staying paused until next user input');
+          clearTimeout(scrollTimeout);
+        }
+      } else {
+        // User scrolled to bottom, resume auto-scroll immediately (only if streaming)
+        if (isStreamingActive) {
+          console.log('👇 User scrolled to bottom during streaming, resuming auto-scroll');
+          setIsUserScrolling(false);
+        } else {
+          console.log('👇 User scrolled to bottom (streaming complete, staying paused)');
+        }
+        clearTimeout(scrollTimeout);
+      }
+      
+      lastScrollTop = currentScrollTop;
+    };
+
+    element.addEventListener('scroll', handleUserScroll, { passive: true });
+    
+    return () => {
+      element.removeEventListener('scroll', handleUserScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, [isProgrammaticScroll, isStreamingActive]);
   
   // Focus input when terminal becomes active
   useEffect(() => {
@@ -231,57 +521,12 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
     }
   }, [terminal, terminalId, commandHistory, addToBuffer, clearBuffer, setProcessing, addToHistory, saveCommand, isAuthenticated, chatMode, sendMessage, setChatMode, setSessionId, activeSessionId]);
 
-  const handleKeyDown = useCallback(async (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      
-      if (input.trim()) {
-        await processCommand(input.trim());
-      }
-      
-      setInput("");
-      setHistoryIndex(-1);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      
-      if (commandHistory.length > 0) {
-        const newIndex = historyIndex === -1 
-          ? commandHistory.length - 1 
-          : Math.max(0, historyIndex - 1);
-        
-        setHistoryIndex(newIndex);
-        setInput(commandHistory[newIndex] || "");
-      }
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      
-      if (historyIndex >= 0) {
-        const newIndex = historyIndex + 1;
-        
-        if (newIndex >= commandHistory.length) {
-          setHistoryIndex(-1);
-          setInput("");
-        } else {
-          setHistoryIndex(newIndex);
-          setInput(commandHistory[newIndex] || "");
-        }
-      }
-    } else if (e.key === "Tab") {
-      e.preventDefault();
-      // TODO: Implement command/file autocompletion
-    } else if (e.metaKey && e.key === "k") {
-      e.preventDefault();
-      clearBuffer(terminalId);
-    }
-  }, [input, commandHistory, historyIndex, processCommand, clearBuffer, terminalId]);
-
   // Enhanced input submit handler
   const handleEnhancedSubmit = useCallback(async (messageContent: string) => {
     if (messageContent.trim()) {
       await processCommand(messageContent.trim());
     }
     setInput("");
-    setHistoryIndex(-1);
   }, [processCommand]);
 
   if (!terminal) {
@@ -390,10 +635,13 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
                         Type &apos;exit&apos; or &apos;quit&apos; to return to terminal mode.
                       </div>
                     ) : (
-                      formattedMessages.map((line, index) => (
-                        <div key={index} className="text-[#cccccc] whitespace-pre-wrap mb-0.5">
-                          {line}
-                        </div>
+                      rawMessages.map((message, index) => (
+                        <TerminalMessage
+                          key={message._id}
+                          message={message}
+                          isLast={index === rawMessages.length - 1}
+                          onRegenerate={handleRegenerate}
+                        />
                       ))
                     )}
                   </>

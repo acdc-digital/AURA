@@ -4,46 +4,13 @@
 import { v } from "convex/values";
 import { action, mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
+import Anthropic from "@anthropic-ai/sdk";
 
-// Anthropic Claude API integration
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-
-// System prompt for the orchestrator agent
-const ORCHESTRATOR_SYSTEM_PROMPT = `You are the Orchestrator Agent for the AURA platform, a powerful IDE-style development environment. Your role is to:
-
-1. **Understand User Intent**: Analyze user requests and determine what they want to accomplish
-2. **Provide Helpful Guidance**: Offer clear, actionable responses to user questions
-3. **Coordinate Tasks**: When complex tasks require specialized tools or agents, explain what would be needed
-4. **Maintain Context**: Keep track of the conversation and provide contextually relevant responses
-
-## About AURA Platform:
-- Modern IDE-style development environment with VS Code inspired interface
-- Built with Next.js, TypeScript, Tailwind CSS, and Convex backend
-- Includes terminal, project management, file operations, and agent system
-- Supports both individual development and team collaboration
-
-## Your Capabilities:
-- Conversational AI assistance for development tasks
-- Guidance on AURA platform features and usage
-- Help with project planning and task breakdown
-- Code review and development best practices
-- Troubleshooting and debugging assistance
-
-## Communication Style:
-- Be conversational but professional
-- Provide clear, actionable guidance
-- Ask clarifying questions when needed
-- Break down complex tasks into manageable steps
-- Reference specific AURA features when relevant
-
-## Important Notes:
-- You currently operate as a conversational agent without access to external tools
-- When users request actions that would require tools (file operations, API calls, etc.), explain what would be needed
-- Focus on providing maximum value through guidance, planning, and conversation
-- Always be helpful and aim to move the user forward in their goals
-
-Engage naturally and help users accomplish their development goals within the AURA platform.`;
+// Initialize Anthropic client
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
 // Helper query to get conversation history
 export const getConversationHistory = query({
@@ -55,7 +22,7 @@ export const getConversationHistory = query({
       .query("chatMessages")
       .filter((q) => q.eq(q.field("sessionId"), sessionId))
       .order("asc")
-      .take(20); // Last 20 messages for context
+      .take(50); // Increased for better context
 
     return messages;
   },
@@ -81,7 +48,193 @@ export const saveChatMessage = mutation({
   },
 });
 
-// Send message to orchestrator and get response
+// Helper mutation to update an existing chat message
+export const updateChatMessage = mutation({
+  args: {
+    messageId: v.id("chatMessages"),
+    content: v.optional(v.string()),
+    tokenCount: v.optional(v.number()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    estimatedCost: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { messageId, ...updates } = args;
+    return await ctx.db.patch(messageId, updates);
+  },
+});
+
+// Helper mutation to save a thinking message with parsed task/tool data
+export const saveThinkingMessage = mutation({
+  args: {
+    content: v.string(),
+    sessionId: v.string(),
+    userId: v.optional(v.string()),
+    thinkingData: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("chatMessages", {
+      role: "thinking",
+      content: args.content,
+      sessionId: args.sessionId,
+      userId: args.userId,
+      createdAt: Date.now(),
+      operation: args.thinkingData ? {
+        type: "tool_executed",
+        details: args.thinkingData,
+      } : undefined,
+    });
+  },
+});
+
+// Helper mutation to update an existing thinking message
+export const updateThinkingMessage = mutation({
+  args: {
+    messageId: v.id("chatMessages"),
+    content: v.string(),
+    thinkingData: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.patch(args.messageId, {
+      content: args.content,
+      operation: args.thinkingData ? {
+        type: "tool_executed",
+        details: args.thinkingData,
+      } : undefined,
+    });
+  },
+});
+
+// Helper function to parse thinking content into visual tasks and tools
+function parseThinkingContent(thinkingText: string, isComplete: boolean = false): {
+  status: "thinking" | "processing" | "completed";
+  tasks?: Array<{
+    id: string;
+    title: string;
+    items: Array<{ type: "text" | "file"; text: string; file?: { name: string } }>;
+    status: "completed";
+  }>;
+  tools?: Array<{
+    id: string;
+    type: string;
+    state: "output-available";
+    input: { operation: string };
+    output: string;
+  }>;
+} {
+  const tasks: Array<{
+    id: string;
+    title: string;
+    items: Array<{ type: "text" | "file"; text: string; file?: { name: string } }>;
+    status: "completed";
+  }> = [];
+  
+  const tools: Array<{
+    id: string;
+    type: string;
+    state: "output-available";
+    input: { operation: string };
+    output: string;
+  }> = [];
+
+  // Extract numbered steps and create tasks - more flexible patterns
+  const patterns = [
+    // Original pattern: "1. **Title**: description"
+    /\d+\.\s*\*\*(.*?)\*\*:?\s*(.*?)(?=\d+\.\s*\*\*|$)/gs,
+    // Alternative pattern: "1. Title:" or just "1. Title"
+    /\d+\.\s*([^:\n]+):?\s*(.*?)(?=\d+\.|$)/gs,
+    // Pattern for simple numbered lists without bold
+    /^(\d+)\.\s+(.+?)$/gm,
+  ];
+  
+  let foundSteps = false;
+  
+  for (const pattern of patterns) {
+    const stepMatches = [...thinkingText.matchAll(pattern)];
+    if (stepMatches.length > 0) {
+      stepMatches.forEach((match, index) => {
+        const title = match[1]?.trim() || `Step ${index + 1}`;
+        const description = match[2]?.trim() || match[0]?.trim() || '';
+        
+        // Create task items from the description
+        const items: Array<{ type: "text" | "file"; text: string; file?: { name: string } }> = [];
+        
+        if (description) {
+          const lines = description.split('\n').filter(line => line.trim());
+          
+          lines.forEach(line => {
+            const trimmedLine = line.trim();
+            // Check if line mentions a file
+            const fileMatch = trimmedLine.match(/`([^`]+\.(ts|tsx|js|jsx|json|md))`/);
+            if (fileMatch) {
+              items.push({
+                type: "file",
+                text: trimmedLine,
+                file: { name: fileMatch[1] }
+              });
+            } else if (trimmedLine.length > 0) {
+              items.push({
+                type: "text",
+                text: trimmedLine
+              });
+            }
+          });
+        }
+
+        tasks.push({
+          id: `task-${index + 1}`,
+          title: title,
+          items: items.length > 0 ? items : [{ type: "text", text: description || title }],
+          status: "completed"
+        });
+      });
+      foundSteps = true;
+      break; // Use the first pattern that matches
+    }
+  }
+  
+  // If no numbered steps found, create a single task from the thinking content
+  if (!foundSteps && thinkingText.trim()) {
+    tasks.push({
+      id: "task-1",
+      title: "Thinking Process",
+      items: [{ type: "text", text: thinkingText.trim() }],
+      status: "completed"
+    });
+  }
+
+  // Extract tool-like operations (file operations, API calls, etc.)
+  const toolPatterns = [
+    /checking\s+(.+)/gi,
+    /analyzing\s+(.+)/gi,
+    /reading\s+(.+)/gi,
+    /creating\s+(.+)/gi,
+    /updating\s+(.+)/gi,
+    /implementing\s+(.+)/gi,
+  ];
+
+  toolPatterns.forEach((pattern, patternIndex) => {
+    const matches = [...thinkingText.matchAll(pattern)];
+    matches.forEach((match, index) => {
+      const operation = match[1].trim();
+      tools.push({
+        id: `tool-${patternIndex}-${index}`,
+        type: ["file_operation", "analysis", "read_operation", "create_operation", "update_operation", "implementation"][patternIndex] || "operation",
+        state: "output-available",
+        input: { operation },
+        output: `Completed: ${operation}`
+      });
+    });
+  });
+
+  return {
+    status: isComplete ? "completed" : "thinking",
+    tasks: tasks.length > 0 ? tasks : undefined,
+    tools: tools.length > 0 ? tools : undefined,
+  };
+}
+
+// Send message to orchestrator with streaming thinking support
 export const sendMessage = action({
   args: {
     message: v.string(),
@@ -98,7 +251,7 @@ export const sendMessage = action({
   }> => {
     try {
       // Get conversation history for context
-      const messages: any[] = await ctx.runQuery(api.orchestrator.getConversationHistory, {
+      const messages = await ctx.runQuery(api.orchestrator.getConversationHistory, {
         sessionId,
       });
 
@@ -111,102 +264,199 @@ export const sendMessage = action({
       });
 
       // Format conversation history for Anthropic API
-      const conversationHistory: Array<{ role: string; content: string }> = messages
-        .filter((msg: any) => msg.role === "user" || msg.role === "assistant")
-        .map((msg: any) => ({
-          role: msg.role === "user" ? "user" : "assistant",
+      const conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = messages
+        .filter((msg) => msg.role === "user" || msg.role === "assistant")
+        .map((msg) => ({
+          role: msg.role === "user" ? "user" as const : "assistant" as const,
           content: msg.content,
         }));
 
       // Add current message
       conversationHistory.push({
-        role: "user",
+        role: "user" as const,
         content: message,
       });
 
-      // Prepare request to Anthropic API
-      const requestBody: any = {
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 4000,
-        temperature: 0.7,
-        system: ORCHESTRATOR_SYSTEM_PROMPT,
-        messages: conversationHistory,
-      };
-
-      // Make request to Anthropic API
-      if (!ANTHROPIC_API_KEY) {
+      if (!process.env.ANTHROPIC_API_KEY) {
         throw new Error("ANTHROPIC_API_KEY environment variable is not set");
       }
 
-      const response: Response = await fetch(ANTHROPIC_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
+                  // Use streaming with extended thinking
+      const stream = anthropic.messages.stream({
+        model: "claude-3-7-sonnet-20250219",
+        max_tokens: 8192, // Must be greater than thinking budget_tokens
+        temperature: 1.0, // Required to be 1.0 when thinking is enabled
+        thinking: {
+          type: "enabled",
+          budget_tokens: 4000 // Reduced to be less than max_tokens
         },
-        body: JSON.stringify(requestBody),
+        system: `You are the Orchestrator Agent for AURA, a comprehensive development platform. You help users with development tasks, planning, guidance, and problem-solving.
+
+When working through complex problems, think step by step about:
+1. Understanding what the user needs
+2. Breaking down the problem into tasks
+3. Considering the best approach
+4. Planning the solution
+
+Then provide clear, actionable guidance.
+
+Current context:
+- You have access to files, projects, and development tools
+- Always provide thoughtful, step-by-step solutions
+- Be specific and actionable in your recommendations`,
+        messages: conversationHistory,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Anthropic API error:", response.status, errorText);
-        throw new Error(`Anthropic API error: ${response.status}`);
+      let thinkingContent = "";
+      let responseContent = "";
+      let thinkingMessageId: Id<"chatMessages"> | null = null;
+      let responseMessageId: Id<"chatMessages"> | null = null;
+      let inputTokens = 0;
+      let outputTokens = 0;
+
+      // Throttling for response updates to prevent UI overwhelm
+      let lastResponseUpdate = 0;
+      const RESPONSE_THROTTLE_MS = 200; // Update every 200ms max for smooth streaming
+
+      // Process streaming events
+      for await (const event of stream) {
+        if (event.type === 'content_block_delta') {
+          if (event.delta.type === 'thinking_delta') {
+            // Accumulate thinking content
+            thinkingContent += event.delta.thinking;
+            
+            // Parse current thinking content and update UI (thinking in progress)
+            const thinkingData = parseThinkingContent(thinkingContent, false);
+            
+            if (!thinkingMessageId) {
+              // Create initial thinking message
+              thinkingMessageId = await ctx.runMutation(api.orchestrator.saveThinkingMessage, {
+                content: thinkingContent,
+                sessionId,
+                userId,
+                thinkingData,
+              });
+            } else {
+              // Update existing thinking message
+              await ctx.runMutation(api.orchestrator.updateThinkingMessage, {
+                messageId: thinkingMessageId,
+                content: thinkingContent,
+                thinkingData,
+              });
+            }
+          } else if (event.delta.type === 'text_delta') {
+            // Accumulate response content and stream it to UI (with throttling)
+            responseContent += event.delta.text;
+            
+            const now = Date.now();
+            const shouldUpdate = now - lastResponseUpdate > RESPONSE_THROTTLE_MS;
+            
+            if (!responseMessageId) {
+              // Always create initial response message
+              responseMessageId = await ctx.runMutation(api.orchestrator.saveChatMessage, {
+                role: "assistant",
+                content: responseContent,
+                sessionId,
+                userId,
+                tokenCount: 0, // Will be updated at the end
+                inputTokens: 0,
+                outputTokens: 0,
+                estimatedCost: 0,
+              });
+              lastResponseUpdate = now;
+            } else if (shouldUpdate) {
+              // Update existing response message with throttled streaming content
+              await ctx.runMutation(api.orchestrator.updateChatMessage, {
+                messageId: responseMessageId,
+                content: responseContent,
+              });
+              lastResponseUpdate = now;
+            }
+            // If not shouldUpdate, we accumulate content but don't trigger DB update
+          }
+        } else if (event.type === 'message_delta') {
+          // Extract token usage
+          if (event.usage) {
+            outputTokens = event.usage.output_tokens || 0;
+          }
+        } else if (event.type === 'message_start') {
+          // Extract input tokens
+          if (event.message.usage) {
+            inputTokens = event.message.usage.input_tokens || 0;
+          }
+        }
       }
 
-      const data: any = await response.json();
-      
-      // Extract response content
-      const assistantResponse: string = data.content?.[0]?.text || "I apologize, but I encountered an issue processing your request.";
-      
-      // Calculate token usage and estimated cost
-      const inputTokens = data.usage?.input_tokens || 0;
-      const outputTokens = data.usage?.output_tokens || 0;
+      // Mark thinking as completed if there was thinking content
+      if (thinkingMessageId && thinkingContent) {
+        const finalThinkingData = parseThinkingContent(thinkingContent, true);
+        await ctx.runMutation(api.orchestrator.updateThinkingMessage, {
+          messageId: thinkingMessageId,
+          content: thinkingContent,
+          thinkingData: finalThinkingData,
+        });
+      }
+
       const totalTokens = inputTokens + outputTokens;
-      
-      // Rough cost estimation for Claude 3.5 Sonnet (as of late 2024)
-      // Input: ~$3 per 1M tokens, Output: ~$15 per 1M tokens
       const estimatedCost = (inputTokens * 3 / 1000000) + (outputTokens * 15 / 1000000);
 
-      // Save assistant response to database
-      await ctx.runMutation(api.orchestrator.saveChatMessage, {
-        role: "assistant",
-        content: assistantResponse,
-        sessionId,
-        userId,
-        tokenCount: totalTokens,
-        inputTokens,
-        outputTokens,
-        estimatedCost,
-      });
+      // Update final assistant response with token info (if response message was created)
+      if (responseMessageId) {
+        await ctx.runMutation(api.orchestrator.updateChatMessage, {
+          messageId: responseMessageId,
+          content: responseContent, // Ensure final content is saved
+          tokenCount: totalTokens,
+          inputTokens,
+          outputTokens,
+          estimatedCost,
+        });
+      } else if (responseContent) {
+        // Fallback: save response if no streaming occurred
+        await ctx.runMutation(api.orchestrator.saveChatMessage, {
+          role: "assistant",
+          content: responseContent,
+          sessionId,
+          userId,
+          tokenCount: totalTokens,
+          inputTokens,
+          outputTokens,
+          estimatedCost,
+        });
+      }
 
       return {
         success: true,
-        response: assistantResponse,
+        response: responseContent,
         tokenCount: totalTokens,
         inputTokens,
         outputTokens,
         estimatedCost,
       };
-
     } catch (error) {
-      console.error("Orchestrator error:", error);
+      console.error("Error in sendMessage:", error);
       
-      // Save error message to chat
+      // Save error message
       await ctx.runMutation(api.orchestrator.saveChatMessage, {
-        role: "system",
+        role: "assistant",
         content: "I apologize, but I encountered an error processing your request. Please try again.",
         sessionId,
         userId,
       });
 
-      throw new Error(`Orchestrator failed: ${error}`);
+      return {
+        success: false,
+        response: "Error processing request",
+        tokenCount: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        estimatedCost: 0,
+      };
     }
   },
 });
 
-// Get orchestrator session info
-export const getSessionInfo = mutation({
+// Get session info
+export const getSessionInfo = query({
   args: {
     sessionId: v.string(),
   },
@@ -214,17 +464,12 @@ export const getSessionInfo = mutation({
     const messages = await ctx.db
       .query("chatMessages")
       .filter((q) => q.eq(q.field("sessionId"), sessionId))
-      .order("desc")
-      .take(50);
-
-    const totalTokens = messages.reduce((sum, msg) => sum + (msg.tokenCount || 0), 0);
-    const totalCost = messages.reduce((sum, msg) => sum + (msg.estimatedCost || 0), 0);
+      .collect();
 
     return {
-      messageCount: messages.length,
-      totalTokens,
-      totalCost,
       sessionId,
+      messageCount: messages.length,
+      lastActivity: messages.length > 0 ? Math.max(...messages.map(m => m.createdAt)) : Date.now(),
     };
   },
 });

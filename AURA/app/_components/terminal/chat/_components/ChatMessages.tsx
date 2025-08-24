@@ -4,6 +4,11 @@
 "use client";
 
 import { EnhancedPromptInput } from '@/components/ai/enhanced-prompt-input';
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from '@/components/ai/conversation';
 import { useState } from 'react';
 
 export function ChatMessages() {
@@ -43,40 +48,43 @@ export function ChatMessages() {
         </div>
       </div>
       
-      {/* Chat messages area */}
-      <div className="flex-1 p-2 overflow-auto">
-        <div className="space-y-3">
-          {messages.length === 0 ? (
-            <div className="text-xs text-[#858585] space-y-1">
-              <div>Welcome to AURA Terminal Chat</div>
-              <div>• Type your message and press Enter to send</div>
-              <div>• Press Shift+Enter to create new lines</div>
-              <div>• Press Ctrl/Cmd+Enter to force submit</div>
-            </div>
-          ) : (
-            messages.map((msg, index) => (
-              <div key={index} className="text-xs">
-                <div className={`font-mono ${
-                  msg.role === 'user'
-                    ? 'text-[#007acc]'
-                    : 'text-[#4ec9b0]'
-                }`}>
-                  {msg.role === 'user' ? '$ user:' : '🤖 assistant:'}
-                </div>
-                <div className="text-[#cccccc] mt-1 whitespace-pre-wrap pl-2">
-                  {msg.content}
-                </div>
+      {/* Chat messages area with auto-scroll */}
+      <Conversation className="flex-1" style={{ minHeight: 0 }}>
+        <ConversationContent className="p-2">
+          <div className="space-y-3">
+            {messages.length === 0 ? (
+              <div className="text-xs text-[#858585] space-y-1">
+                <div>Welcome to AURA Terminal Chat</div>
+                <div>• Type your message and press Enter to send</div>
+                <div>• Press Shift+Enter to create new lines</div>
+                <div>• Press Ctrl/Cmd+Enter to force submit</div>
               </div>
-            ))
-          )}
-          {isLoading && (
-            <div className="text-xs">
-              <div className="text-[#4ec9b0] font-mono">🤖 assistant:</div>
-              <div className="text-[#858585] mt-1 pl-2">thinking...</div>
-            </div>
-          )}
-        </div>
-      </div>
+            ) : (
+              messages.map((msg, index) => (
+                <div key={index} className="text-xs">
+                  <div className={`font-mono ${
+                    msg.role === 'user'
+                      ? 'text-[#007acc]'
+                      : 'text-[#4ec9b0]'
+                  }`}>
+                    {msg.role === 'user' ? '$ user:' : '🤖 assistant:'}
+                  </div>
+                  <div className="text-[#cccccc] mt-1 whitespace-pre-wrap pl-2">
+                    {msg.content}
+                  </div>
+                </div>
+              ))
+            )}
+            {isLoading && (
+              <div className="text-xs">
+                <div className="text-[#4ec9b0] font-mono">🤖 assistant:</div>
+                <div className="text-[#858585] mt-1 pl-2">thinking...</div>
+              </div>
+            )}
+          </div>
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
       
       {/* Enhanced Input area */}
       <EnhancedPromptInput
