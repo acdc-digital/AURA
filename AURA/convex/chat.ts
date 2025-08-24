@@ -327,3 +327,66 @@ export const cleanupTemporaryMessages = mutation({
     return temporaryMessages.length;
   },
 });
+
+// Update session token statistics
+export const updateSessionTokens = mutation({
+  args: {
+    sessionId: v.string(),
+    inputTokens: v.number(),
+    outputTokens: v.number(),
+    estimatedCost: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("chatSessions")
+      .withIndex("by_session_id", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+      
+    if (session) {
+      const totalTokens = args.inputTokens + args.outputTokens;
+      
+      await ctx.db.patch(session._id, {
+        totalTokens: session.totalTokens + totalTokens,
+        totalInputTokens: session.totalInputTokens + args.inputTokens,
+        totalOutputTokens: session.totalOutputTokens + args.outputTokens,
+        totalCost: session.totalCost + args.estimatedCost,
+        messageCount: session.messageCount + 1,
+        lastActivity: Date.now(),
+      });
+      
+      return {
+        totalTokens: session.totalTokens + totalTokens,
+        totalInputTokens: session.totalInputTokens + args.inputTokens,
+        totalOutputTokens: session.totalOutputTokens + args.outputTokens,
+        totalCost: session.totalCost + args.estimatedCost,
+      };
+    }
+    
+    return null;
+  },
+});
+
+// Get session token statistics
+export const getSessionTokens = query({
+  args: { sessionId: v.string() },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("chatSessions")
+      .withIndex("by_session_id", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+      
+    if (session) {
+      return {
+        totalTokens: session.totalTokens,
+        totalInputTokens: session.totalInputTokens,
+        totalOutputTokens: session.totalOutputTokens,
+        totalCost: session.totalCost,
+        messageCount: session.messageCount,
+        maxTokensAllowed: session.maxTokensAllowed,
+        percentageUsed: (session.totalTokens / session.maxTokensAllowed) * 100,
+      };
+    }
+    
+    return null;
+  },
+});

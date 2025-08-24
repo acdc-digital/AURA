@@ -8,6 +8,8 @@ import { useTerminalStore } from "@/lib/store/terminal";
 import { useTerminalSessionStore } from "@/lib/store/terminal-sessions";
 import { useSessionMessages } from "@/lib/hooks/useSessionMessages";
 import { useSessionSync } from "@/lib/hooks/useSessionSync";
+import { useSessionTokens } from "@/lib/hooks/useSessionTokens";
+import { getTokenUsageColor } from "@/lib/utils/tokens";
 import { EnhancedPromptInput } from "@/components/ai/enhanced-prompt-input";
 import { TerminalMessage } from "../chat/_components/TerminalMessage";
 import { api } from "@/convex/_generated/api";
@@ -35,6 +37,9 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
     activeSessionId
   } = useSessionMessages();
   const { createSessionWithSync } = useSessionSync();
+  
+  // Token tracking for active session
+  const { totalTokens, formatTokenCount, getUsageStatus } = useSessionTokens(activeSessionId);
   
   const {
     terminals,
@@ -186,8 +191,6 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
   useEffect(() => {
     if (!outputRef.current || isUserScrolling) return;
 
-    const element = outputRef.current;
-    
     // Check if any assistant message is currently streaming (no token counts)
     const hasStreamingMessage = rawMessages.some(msg =>
       msg.role === "assistant" &&
@@ -403,10 +406,6 @@ Type 'exit' or 'quit' to return to terminal mode.`);
     try {
       setProcessing(terminalId, true);
       
-      // Add command to buffer with appropriate prompt
-      const prompt = chatMode ? "chat>" : `${terminal.currentDirectory} $`;
-      addToBuffer(terminalId, `${prompt} ${command}`);
-      
       // Handle chat mode
       if (chatMode) {
         if (command.toLowerCase() === "exit" || command.toLowerCase() === "quit") {
@@ -444,7 +443,9 @@ Type 'exit' or 'quit' to return to terminal mode.`);
         return;
       }
       
-      // Simulate command processing
+      // Add command to buffer with appropriate prompt (only for terminal mode)
+      const prompt = `${terminal.currentDirectory} $`;
+      addToBuffer(terminalId, `${prompt} ${command}`);
       let output = "";
       let exitCode = 0;
       
@@ -524,9 +525,10 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
   // Enhanced input submit handler
   const handleEnhancedSubmit = useCallback(async (messageContent: string) => {
     if (messageContent.trim()) {
+      // Clear input immediately to prevent showing "sending" state
+      setInput("");
       await processCommand(messageContent.trim());
     }
-    setInput("");
   }, [processCommand]);
 
   if (!terminal) {
@@ -680,6 +682,9 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
             <div className="flex items-center space-x-4">
               <span>Commands: {commandHistory.length}</span>
               <span>Lines: {terminal.buffer.length}</span>
+              <span className={getTokenUsageColor(getUsageStatus())}>
+                Tokens: {formatTokenCount(totalTokens)}
+              </span>
             </div>
             <div className="flex items-center space-x-2">
               {chatMode ? (

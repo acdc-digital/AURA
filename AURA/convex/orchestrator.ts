@@ -400,6 +400,14 @@ Current context:
       const totalTokens = inputTokens + outputTokens;
       const estimatedCost = (inputTokens * 3 / 1000000) + (outputTokens * 15 / 1000000);
 
+      // Update session token statistics
+      await ctx.runMutation(api.chat.updateSessionTokens, {
+        sessionId,
+        inputTokens,
+        outputTokens,
+        estimatedCost,
+      });
+
       // Update final assistant response with token info (if response message was created)
       if (responseMessageId) {
         await ctx.runMutation(api.orchestrator.updateChatMessage, {

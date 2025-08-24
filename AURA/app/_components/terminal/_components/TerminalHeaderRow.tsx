@@ -120,41 +120,40 @@ export function TerminalHeaderRow() {
         </div>
       </div>
       
-      {/* Right side - Tab-specific info and collapse button */}
-      <div className="flex items-center space-x-2 px-3 text-xs text-white">
+      {/* Right side - Tab-specific info, processing indicator, and collapse button */}
+      <div className="flex items-center space-x-2">
         {/* Tab-specific status and counts */}
-        {activeTab === 'terminal' && (
-          <>
-            {isProcessing && (
-              <div className="flex items-center space-x-1">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                <span>Processing...</span>
-              </div>
-            )}
-          </>
+        <div className="px-3 text-xs text-white">
+          {activeTab === 'history' && (
+            <span>1 history</span>
+          )}
+          
+          {activeTab === 'alerts' && (
+            <span>{alerts.length} alert{alerts.length === 1 ? '' : 's'}</span>
+          )}
+          
+          {activeTab === 'settings' && (
+            <span>settings</span>
+          )}
+        </div>
+
+        {/* Processing indicator - positioned at far right before collapse button */}
+        {activeTab === 'terminal' && isProcessing && (
+          <div className="flex items-center space-x-1 px-2 text-xs text-white">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            <span>Processing...</span>
+          </div>
         )}
         
-        {activeTab === 'history' && (
-          <span>1 history</span>
-        )}
-        
-        {activeTab === 'alerts' && (
-          <span>{alerts.length} alert{alerts.length === 1 ? '' : 's'}</span>
-        )}
-        
-        {activeTab === 'settings' && (
-          <span>settings</span>
-        )}
+        {/* Collapse button with dynamic icon */}
+        <button
+          className="h-[25px] px-2 text-white border border-[#cccccc40] hover:bg-[#ffffff20] rounded flex items-center justify-center mr-2 transition-colors duration-150"
+          onClick={toggleCollapse}
+          title="Collapse Terminal"
+        >
+          <span className="text-xs">−</span>
+        </button>
       </div>
-      
-      {/* Collapse button with dynamic icon */}
-      <button
-        className="h-[25px] px-2 text-white border border-[#cccccc40] hover:bg-[#ffffff20] rounded flex items-center justify-center mr-2 transition-colors duration-150"
-        onClick={toggleCollapse}
-        title="Collapse Terminal"
-      >
-        <span className="text-xs">−</span>
-      </button>
     </div>
   );
 }

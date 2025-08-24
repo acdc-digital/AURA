@@ -8,6 +8,7 @@ export { useCalendarPosts } from "./useCalendarPosts";
 export { useTrash } from "./useTrash";
 export { useSessionSync } from "./useSessionSync";
 export { useSessionMessages } from "./useSessionMessages";
+export { useSessionTokens } from "./useSessionTokens";
 export {
   useTerminal,
   useTerminalHistory,
