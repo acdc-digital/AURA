@@ -16,7 +16,8 @@ import {
   Plus, 
   X,
   GripVertical,
-  Camera
+  Camera,
+  ContactRound
 } from "lucide-react";
 import { useState } from "react";
 import { FileTreeItem } from "@/app/_components/activity/_components/fileExplorer/FileTreeItem";
@@ -27,36 +28,37 @@ const SYSTEM_FOLDERS = [
     id: 'brand-identity',
     name: 'Brand Identity',
     type: 'system',
-    icon: FileText,
-    description: 'Brand guidelines and identity assets'
+    icon: ContactRound,
+    description: 'Brand guidelines and identity assets',
+    files: [
+      {
+        id: 'identity-guidelines',
+        name: 'Identity Guidelines',
+        type: 'guidelines',
+        icon: FileText
+      }
+    ]
   },
   {
     id: 'media',
     name: 'Media',
     type: 'system',
     icon: Camera,
-    description: 'Media assets and creative content'
+    description: 'Media assets and creative content',
+    files: []
   }
 ] as const;
 
 export function FileExplorerPanel() {
-  const { projects, isLoading: projectsLoading, createProject } = useProjects();
   const { files, isLoading: filesLoading, createFile } = useFiles();
+  const { projects, isLoading: projectsLoading, createProject } = useProjects();
   const { moveFileToTrash, moveProjectToTrash } = useTrash();
-  const { openTab } = useEditorStore();
-
-  // Debug logging for files
-  console.log('FileExplorerPanel render:', {
-    files: files?.length,
-    filesLoading,
-    allFiles: files?.map(f => ({ id: f._id, name: f.name, projectId: f.projectId }))
-  });
+  const { openTab, openIdentityGuidelinesTab } = useEditorStore();
   
-  // UI state for creating new items
-  const [isCreatingProject, setIsCreatingProject] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [expandedSystemFolders, setExpandedSystemFolders] = useState<Set<string>>(new Set());
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
   const [creatingFileInProject, setCreatingFileInProject] = useState<string | null>(null);
   const [newFileName, setNewFileName] = useState('');
 
@@ -285,10 +287,32 @@ export function FileExplorerPanel() {
                     </div>
                   </div>
                   
-                  {/* System folder files would go here */}
+                  {/* System folder files */}
                   {isExpanded && (
-                    <div className="ml-4 px-2 py-1 text-xs text-[#858585]">
-                      No {folder.name.toLowerCase()} files
+                    <div className="ml-4">
+                      {folder.files && folder.files.length > 0 ? (
+                        folder.files.map((file) => {
+                          const FileIconComponent = file.icon;
+                          return (
+                            <div
+                              key={file.id}
+                              className="flex items-center gap-2 px-2 py-1 hover:bg-[#2d2d2d] rounded cursor-pointer text-[#cccccc] group"
+                              onClick={() => {
+                                if (file.id === 'identity-guidelines') {
+                                  openIdentityGuidelinesTab();
+                                }
+                              }}
+                            >
+                              <FileIconComponent className="w-4 h-4 flex-shrink-0 text-[#858585]" />
+                              <span className="text-sm truncate">{file.name}</span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="px-2 py-1 text-xs text-[#858585]">
+                          No {folder.name.toLowerCase()} files
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

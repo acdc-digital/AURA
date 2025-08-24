@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "@/lib/store";
 import { useConvexAuth } from "convex/react";
 import { Id } from "@/convex/_generated/dataModel";
-import { ChevronLeft, ChevronRight, Plus, X, FileCode, FileText, Settings, CreditCard, User, Calendar, Bot, Puzzle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, FileCode, FileText, Settings, CreditCard, User, Calendar, Bot, Puzzle, Palette } from "lucide-react";
 import { UserProfile } from "@/app/_components/activity/_components/userProfle/UserProfile";
 import { FileExplorerTab } from "@/app/_components/activity/_components/fileExplorer";
 import CalendarTab from "@/app/_components/activity/_components/calendar/CalendarTab";
@@ -15,6 +15,7 @@ import SocialConnectorTab from "@/app/_components/activity/_components/socialCon
 import { AgentTab } from "@/app/_components/activity/_components/agents";
 import { ExtensionTab } from "@/app/_components/activity/_components/extensions";
 import { FileTabContainer } from "@/app/_components/dashboard/_components/fileTab";
+import { IdentityGuidelinesTab } from "@/app/_components/dashboard/_components/identityTab/IdentityGuidelinesTab";
 
 export function Navigator() {
   const {
@@ -103,6 +104,8 @@ export function Navigator() {
         return Bot;
       case 'extension':
         return Puzzle;
+      case 'identity-guidelines':
+        return Palette;
       default:
         return FileCode;
     }
@@ -219,6 +222,7 @@ export function Navigator() {
             {currentTab.type === 'social-connector' && <SocialConnectorTab />}
             {currentTab.type === 'agent' && <AgentTab />}
             {currentTab.type === 'extension' && <ExtensionTab />}
+            {currentTab.type === 'identity-guidelines' && <IdentityGuidelinesTab />}
             {currentTab.type === 'subscription' && (
               <div className="p-8 text-center">
                 <h2 className="text-xl font-semibold text-[#cccccc] mb-4">

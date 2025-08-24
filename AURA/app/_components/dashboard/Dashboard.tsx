@@ -3,55 +3,23 @@
 
 'use client'
 
-import { FC, useState } from 'react'
+import { FC } from 'react'
 import { cn } from '@/lib/utils'
-import { X, Plus, Code, FileText, Database } from 'lucide-react'
+import { X, Plus, Code, Database } from 'lucide-react'
+import { IdentityGuidelinesTab } from './_components/identityTab/IdentityGuidelinesTab'
+import { useEditorStore } from '@/lib/store/editor'
 
 interface DashboardProps {
   className?: string
 }
 
-interface Tab {
-  id: string
-  title: string
-  content: string
-  icon: React.ReactNode
-  isDirty?: boolean
-  canClose?: boolean
-}
-
 export const Dashboard: FC<DashboardProps> = ({ className }) => {
-  const [tabs, setTabs] = useState<Tab[]>([
-    {
-      id: 'welcome',
-      title: 'Welcome',
-      content: 'welcome',
-      icon: <FileText className="w-4 h-4" />,
-      canClose: false
-    },
-    {
-      id: 'database',
-      title: 'Database',
-      content: 'database',
-      icon: <Database className="w-4 h-4" />,
-      canClose: true
-    }
-  ])
-  
-  const [activeTabId, setActiveTabId] = useState('welcome')
+  const { tabs, activeTabId, closeTab, setActiveTab } = useEditorStore();
 
-  const closeTab = (tabId: string) => {
-    setTabs(prev => prev.filter(tab => tab.id !== tabId))
-    if (activeTabId === tabId) {
-      const remainingTabs = tabs.filter(tab => tab.id !== tabId)
-      if (remainingTabs.length > 0) {
-        setActiveTabId(remainingTabs[remainingTabs.length - 1].id)
-      }
-    }
-  }
-
-  const renderTabContent = (contentType: string) => {
-    switch (contentType) {
+  const renderTabContent = (tabType: string) => {
+    switch (tabType) {
+      case 'identity-guidelines':
+        return <IdentityGuidelinesTab />;
       case 'welcome':
         return (
           <div className="p-8 text-center">
@@ -65,7 +33,7 @@ export const Dashboard: FC<DashboardProps> = ({ className }) => {
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
-                <div className="p-6 rounded-lg" style={{ backgroundColor: '#252526' }}>
+                <div className="p-6 rounded-lg bg-[#252526]">
                   <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
                     <Code className="w-5 h-5 text-[#007acc]" />
                     Development
@@ -76,7 +44,7 @@ export const Dashboard: FC<DashboardProps> = ({ className }) => {
                   </p>
                 </div>
                 
-                <div className="p-6 rounded-lg" style={{ backgroundColor: '#252526' }}>
+                <div className="p-6 rounded-lg bg-[#252526]">
                   <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
                     <Database className="w-5 h-5 text-[#007acc]" />
                     Database
@@ -99,7 +67,7 @@ export const Dashboard: FC<DashboardProps> = ({ className }) => {
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="p-4 rounded-lg border border-[#2d2d30]" style={{ backgroundColor: '#252526' }}>
+              <div className="p-4 rounded-lg border border-[#2d2d30] bg-[#252526]">
                 <h3 className="text-white font-semibold mb-3">Tables</h3>
                 <div className="space-y-2">
                   {['users', 'projects', 'tasks', 'files'].map((table) => (
@@ -116,7 +84,7 @@ export const Dashboard: FC<DashboardProps> = ({ className }) => {
                 </div>
               </div>
               
-              <div className="p-4 rounded-lg border border-[#2d2d30]" style={{ backgroundColor: '#252526' }}>
+              <div className="p-4 rounded-lg border border-[#2d2d30] bg-[#252526]">
                 <h3 className="text-white font-semibold mb-3">Recent Queries</h3>
                 <div className="space-y-2">
                   {[
@@ -145,39 +113,43 @@ export const Dashboard: FC<DashboardProps> = ({ className }) => {
               This is where your main content will be displayed.
             </p>
           </div>
-        )
+        );
     }
+  };
+
+  if (tabs.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#1e1e1e]">
+        <div className="text-center">
+          <h2 className="text-[#cccccc] text-lg mb-2">No tabs open</h2>
+          <p className="text-[#858585] text-sm">Open a file from the explorer to get started</p>
+        </div>
+      </div>
+    );
   }
 
-  const activeTab = tabs.find(tab => tab.id === activeTabId)
+  const activeTab = tabs.find(tab => tab.id === activeTabId);
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Tab Bar */}
-      <div 
-        className="flex items-center border-b border-[#2d2d30] min-h-[35px]"
-        style={{ backgroundColor: '#2d2d30' }}
-      >
+      <div className="flex items-center border-b border-[#2d2d30] min-h-[35px] bg-[#2d2d30]">
         {tabs.map((tab) => (
           <div
             key={tab.id}
             className={cn(
               "flex items-center gap-2 px-3 py-2 border-r border-[#2d2d30] cursor-pointer group transition-colors",
-              activeTabId === tab.id 
-                ? "text-white" 
-                : "text-[#858585] hover:text-[#cccccc]"
+              activeTabId === tab.id
+                ? "text-white bg-[#1e1e1e]"
+                : "text-[#858585] hover:text-[#cccccc] bg-[#2d2d30]"
             )}
-            style={{ 
-              backgroundColor: activeTabId === tab.id ? '#1e1e1e' : '#2d2d30'
-            }}
-            onClick={() => setActiveTabId(tab.id)}
+            onClick={() => setActiveTab(tab.id)}
           >
-            {tab.icon}
             <span className="text-sm">{tab.title}</span>
             {tab.isDirty && (
               <div className="w-2 h-2 bg-white rounded-full" />
             )}
-            {tab.canClose && (
+            {(!tab.isPinned) && (
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -202,11 +174,14 @@ export const Dashboard: FC<DashboardProps> = ({ className }) => {
       </div>
 
       {/* Content Area */}
-      <div 
-        className="flex-1 overflow-auto vscode-scrollbar"
-        style={{ backgroundColor: '#1e1e1e' }}
-      >
-        {activeTab && renderTabContent(activeTab.content)}
+      <div className="flex-1 overflow-auto vscode-scrollbar bg-[#1e1e1e]">
+        {activeTab ? (
+          renderTabContent(activeTab.type || 'welcome')
+        ) : (
+          <div className="p-6 text-center text-[#858585]">
+            <p>No active tab</p>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -7,7 +7,7 @@ import { persist } from "zustand/middleware";
 interface Tab {
   id: string;
   title: string;
-  type: 'file' | 'welcome' | 'settings' | 'subscription' | 'user-profile' | 'calendar' | 'social-connector' | 'agent' | 'extension';
+  type: 'file' | 'welcome' | 'settings' | 'subscription' | 'user-profile' | 'calendar' | 'social-connector' | 'agent' | 'extension' | 'identity-guidelines';
   filePath?: string;
   isDirty: boolean;
   isPinned: boolean;
@@ -38,6 +38,7 @@ interface EditorState {
   // Actions
   openTab: (tab: Omit<Tab, 'isDirty' | 'isPinned'>) => void;
   openSpecialTab: (id: string, title: string, type: Tab['type']) => void;
+  openIdentityGuidelinesTab: () => void;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;
   updateTabTitle: (tabId: string, title: string) => void;
@@ -92,6 +93,25 @@ export const useEditorStore = create<EditorState>()(
           type,
           isDirty: false,
           isPinned: false,
+        };
+        return {
+          tabs: [...state.tabs, newTab],
+          activeTabId: id,
+        };
+      }),
+
+      openIdentityGuidelinesTab: () => set((state) => {
+        const id = 'identity-guidelines';
+        const exists = state.tabs.find(t => t.id === id);
+        if (exists) {
+          return { activeTabId: id };
+        }
+        const newTab: Tab = {
+          id,
+          title: 'Identity Guidelines',
+          type: 'identity-guidelines',
+          isDirty: false,
+          isPinned: true, // Pin by default as this is a permanent tab
         };
         return {
           tabs: [...state.tabs, newTab],

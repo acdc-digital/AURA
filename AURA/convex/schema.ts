@@ -647,4 +647,142 @@ export default defineSchema({
     .index("by_user", ["userId", "timestamp"])
     .index("by_terminal", ["terminalId", "timestamp"])
     .index("by_session", ["sessionId", "timestamp"]),
+
+  // Identity Guidelines - Brand identity configuration and settings per user
+  identityGuidelines: defineTable({
+    userId: v.union(v.string(), v.id("users")), // User who owns this identity
+    
+    // Core Brand Information
+    businessName: v.optional(v.string()),
+    brandSlogan: v.optional(v.string()),
+    businessDescription: v.optional(v.string()),
+    missionStatement: v.optional(v.string()),
+    visionStatement: v.optional(v.string()),
+    coreValues: v.optional(v.array(v.string())),
+    
+    // Target Audience
+    targetAudience: v.optional(v.object({
+      primaryDemographic: v.optional(v.string()),
+      ageRange: v.optional(v.string()),
+      interests: v.optional(v.array(v.string())),
+      painPoints: v.optional(v.array(v.string())),
+      psychographics: v.optional(v.string()),
+    })),
+    
+    // Brand Personality & Voice
+    brandPersonality: v.optional(v.object({
+      traits: v.optional(v.array(v.string())), // e.g., ["Professional", "Friendly", "Innovative"]
+      toneOfVoice: v.optional(v.string()), // e.g., "Conversational yet professional"
+      communicationStyle: v.optional(v.string()), // e.g., "Direct and helpful"
+      brandArchetype: v.optional(v.string()), // e.g., "The Helper", "The Innovator"
+    })),
+    
+    // Visual Identity
+    colorPalette: v.optional(v.object({
+      primaryColors: v.optional(v.array(v.string())), // Hex color codes
+      secondaryColors: v.optional(v.array(v.string())),
+      accentColors: v.optional(v.array(v.string())),
+      neutralColors: v.optional(v.array(v.string())),
+    })),
+    
+    typography: v.optional(v.object({
+      primaryFont: v.optional(v.string()),
+      secondaryFont: v.optional(v.string()),
+      headingFont: v.optional(v.string()),
+      bodyFont: v.optional(v.string()),
+      webFonts: v.optional(v.array(v.string())),
+      fontHierarchy: v.optional(v.string()), // Usage guidelines for different font sizes/weights
+    })),
+    
+    logoGuidelines: v.optional(v.object({
+      logoVariants: v.optional(v.array(v.string())), // URLs or descriptions
+      logoUsage: v.optional(v.string()), // Usage guidelines
+      logoRestrictions: v.optional(v.array(v.string())), // What not to do
+      minimumSize: v.optional(v.string()),
+      clearSpace: v.optional(v.string()),
+      fileFormats: v.optional(v.array(v.string())), // Available file formats
+      colorVariations: v.optional(v.array(v.string())), // When to use which color version
+    })),
+    
+    // Visual Style Guidelines (New)
+    visualStyle: v.optional(v.object({
+      photographyStyle: v.optional(v.string()), // Photography guidelines
+      illustrationStyle: v.optional(v.string()),
+      iconographyStyle: v.optional(v.string()),
+      dataVisualizationStyle: v.optional(v.string()),
+      videoAnimationStyle: v.optional(v.string()),
+    })),
+    
+    // Brand Applications (New)
+    applicationGuidelines: v.optional(v.object({
+      websiteGuidelines: v.optional(v.string()),
+      marketingMaterials: v.optional(v.string()),
+      stationeryGuidelines: v.optional(v.string()),
+      merchandiseGuidelines: v.optional(v.string()),
+      signageGuidelines: v.optional(v.string()),
+      templates: v.optional(v.array(v.string())), // Available template references
+    })),
+    
+    // Legal & Resources (New)
+    legalInformation: v.optional(v.object({
+      trademarkInfo: v.optional(v.string()),
+      copyrightInfo: v.optional(v.string()),
+      usageRights: v.optional(v.string()),
+      disclaimers: v.optional(v.array(v.string())),
+      brandContact: v.optional(v.string()), // Brand guardian contact
+      assetLibrary: v.optional(v.string()), // Link to asset downloads
+      versionHistory: v.optional(v.array(v.object({
+        version: v.string(),
+        date: v.number(),
+        changes: v.string(),
+      }))),
+    })),
+    
+    // Industry & Competition
+    industryContext: v.optional(v.object({
+      industry: v.optional(v.string()),
+      businessModel: v.optional(v.string()),
+      keyCompetitors: v.optional(v.array(v.string())),
+      competitiveAdvantage: v.optional(v.string()),
+      uniqueSellingProposition: v.optional(v.string()),
+    })),
+    
+    // Content Guidelines
+    contentGuidelines: v.optional(v.object({
+      contentPillars: v.optional(v.array(v.string())), // Main topics to focus on
+      messagingFramework: v.optional(v.string()),
+      keyMessages: v.optional(v.array(v.string())),
+      doNotUse: v.optional(v.array(v.string())), // Words/phrases to avoid
+      preferredTerminology: v.optional(v.array(v.string())),
+    })),
+    
+    // Social Media Guidelines
+    socialMediaGuidelines: v.optional(v.object({
+      platforms: v.optional(v.array(v.string())), // Which platforms to focus on
+      postingFrequency: v.optional(v.object({
+        platform: v.string(),
+        frequency: v.string(),
+      })),
+      hashtagStrategy: v.optional(v.array(v.string())),
+      mentionGuidelines: v.optional(v.string()),
+    })),
+    
+    // Metadata
+    version: v.optional(v.number()), // For versioning changes
+    lastUpdated: v.optional(v.number()),
+    completionPercentage: v.optional(v.number()), // How complete the guidelines are (0-100)
+    status: v.union(
+      v.literal("draft"),
+      v.literal("in-progress"),
+      v.literal("complete"),
+      v.literal("needs-review")
+    ),
+    
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId", "updatedAt"])
+    .index("by_status", ["status", "updatedAt"])
+    .index("by_user_status", ["userId", "status", "updatedAt"]),
 });

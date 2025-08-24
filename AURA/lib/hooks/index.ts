@@ -9,6 +9,7 @@ export { useTrash } from "./useTrash";
 export { useSessionSync } from "./useSessionSync";
 export { useSessionMessages } from "./useSessionMessages";
 export { useSessionTokens } from "./useSessionTokens";
+export { useIdentityGuidelines } from "./useIdentityGuidelines";
 export {
   useTerminal,
   useTerminalHistory,
@@ -37,3 +38,15 @@ export type {
   TrashStats,
 } from "./useTrash";
 export type { Terminal, TerminalCommand } from "./useTerminal";
+export type {
+  IdentityGuidelines,
+  IdentityGuidelinesStats,
+  TargetAudience,
+  BrandPersonality,
+  ColorPalette,
+  Typography,
+  LogoGuidelines,
+  IndustryContext,
+  ContentGuidelines,
+  SocialMediaGuidelines,
+} from "./useIdentityGuidelines";
