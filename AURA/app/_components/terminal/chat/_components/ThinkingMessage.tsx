@@ -54,8 +54,8 @@ export const ThinkingMessage: FC<ThinkingMessageProps> = ({
           <Loader2 className="h-3 w-3 animate-spin text-[#007acc]" />
         )}
         <div className="flex items-center gap-1">
-          <Cloud className="h-4.5 w-4.5 text-[#858585] fill-none stroke-2" />
-          <span className="text-[#858585]">Thinking...</span>
+          <Cloud className="h-4 w-4 text-[#858585] fill-none stroke-2" />
+          <span className="text-[#858585] text-xs">Thinking...</span>
         </div>
         <span className="text-xs bg-[#2d2d2d] px-2 py-0.5 rounded text-[#666666]">
           {data.status || "thinking"}

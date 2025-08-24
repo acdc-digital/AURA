@@ -67,7 +67,7 @@ export function ChatMessages() {
                       ? 'text-[#007acc]'
                       : 'text-[#4ec9b0]'
                   }`}>
-                    {msg.role === 'user' ? '$ user:' : '🤖 assistant:'}
+                    {msg.role === 'user' ? '$ User:' : '🤖 assistant:'}
                   </div>
                   <div className="text-[#cccccc] mt-1 whitespace-pre-wrap pl-2">
                     {msg.content}

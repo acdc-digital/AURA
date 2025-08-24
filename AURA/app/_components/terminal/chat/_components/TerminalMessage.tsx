@@ -52,7 +52,7 @@ export const TerminalMessage: FC<TerminalMessageProps> = ({
   const formatMessage = (msg: TerminalMessageProps['message']) => {
     switch (msg.role) {
       case 'user':
-        return `user: ${msg.content}`;
+        return `User:\n${msg.content}`;
       case 'assistant':
         // For assistant messages, return just the content - we'll render it with markdown
         return msg.content;
@@ -119,8 +119,8 @@ export const TerminalMessage: FC<TerminalMessageProps> = ({
                   <span className="inline-block w-2 h-4 bg-[#4ec9b0] ml-1 animate-pulse" />
                 )}
               </div>
-              {/* Render assistant response with streaming-optimized markdown */}
-              <div data-role="assistant">
+              {/* Render assistant response with streaming-optimized markdown - indented */}
+              <div data-role="assistant" className="pl-6">
                 <Response
                   parseIncompleteMarkdown={isStreaming}
                   className="text-[#cccccc] leading-relaxed"
@@ -150,7 +150,7 @@ export const TerminalMessage: FC<TerminalMessageProps> = ({
           
           {/* Actions - only show for completed assistant messages (not streaming) */}
           {message.role === "assistant" && !isStreaming && (
-            <Actions className="mt-3 mb-4">
+            <Actions className="mt-3 mb-4 pl-6">
               <Action
                 label="Copy"
                 onClick={handleCopy}
