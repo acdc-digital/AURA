@@ -39,8 +39,8 @@ export function useUser(): UseUserReturn {
   
   // Convex queries - these are our source of truth for user data
   const user = useQuery(api.users.getCurrentUser);
-  // Only fetch stats if user is authenticated (user exists)
-  const stats = useQuery(api.users.getUserStats, user ? {} : "skip");
+  // Only fetch stats if user is authenticated and loaded
+  const stats = useQuery(api.users.getUserStats, (isLoaded && isSignedIn && user) ? {} : "skip");
   
   // Convex mutations
   const upsertUser = useMutation(api.users.upsertUser);

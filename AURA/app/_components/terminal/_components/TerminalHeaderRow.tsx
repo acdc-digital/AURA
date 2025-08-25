@@ -18,7 +18,7 @@ export function TerminalHeaderRow() {
   } = useTerminalStore();
 
   return (
-    <div className="h-[35px] bg-[#0e639c] flex items-center justify-between px-0 flex-shrink-0 rounded-tl-lg">
+    <div className="h-[35px] bg-[#0e639c] flex items-center justify-between px-0 flex-shrink-0 rounded-tl-lg relative z-30">
       {/* Left side - Tab buttons and terminal tabs */}
       <div className="flex items-center h-full overflow-x-auto">
         {/* Navigation Tab Buttons */}
@@ -147,7 +147,7 @@ export function TerminalHeaderRow() {
         
         {/* Collapse button with dynamic icon */}
         <button
-          className="h-[25px] px-2 text-white border border-[#cccccc40] hover:bg-[#ffffff20] rounded flex items-center justify-center mr-2 transition-colors duration-150"
+          className="h-[25px] px-2 text-white border border-[#cccccc40] hover:bg-[#ffffff20] rounded flex items-center justify-center mr-2 transition-colors duration-150 relative z-40"
           onClick={toggleCollapse}
           title="Collapse Terminal"
         >

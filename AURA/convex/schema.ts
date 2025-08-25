@@ -202,6 +202,15 @@ export default defineSchema({
     name: v.optional(v.string()), // Computed from firstName + lastName
     role: v.optional(v.string()),
 
+    // Onboarding status
+    onboardingStatus: v.optional(v.union(
+      v.literal("not_started"),
+      v.literal("in_progress"),
+      v.literal("completed"),
+      v.literal("skipped")
+    )),
+    onboardingCompletedAt: v.optional(v.number()),
+
     // Legacy fields (for backward compatibility - can be removed later)
     isAnonymous: v.optional(v.boolean()),
     image: v.optional(v.string()), // Use imageUrl instead

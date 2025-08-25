@@ -6,6 +6,7 @@ import { action, mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import Anthropic from "@anthropic-ai/sdk";
+import { ORCHESTRATOR_SYSTEM_PROMPT } from "./prompts";
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -250,6 +251,32 @@ export const sendMessage = action({
     estimatedCost: number;
   }> => {
     try {
+      // Check if user needs onboarding first
+      const needsOnboarding = await ctx.runQuery(api.users.needsOnboarding);
+      
+      // If user needs onboarding, redirect to onboarding agent
+      if (needsOnboarding) {
+        const onboardingResponse = await ctx.runAction(api.onboarding.handleOnboardingMessage, {
+          message,
+          sessionId,
+          userId,
+        });
+        
+        if (onboardingResponse.success) {
+          return {
+            success: true,
+            response: onboardingResponse.response || "Onboarding message processed",
+            tokenCount: 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            estimatedCost: 0,
+          };
+        }
+        
+        // If onboarding failed, fall back to regular orchestrator
+      }
+
+      // Continue with regular orchestrator logic
       // Get conversation history for context
       const messages = await ctx.runQuery(api.orchestrator.getConversationHistory, {
         sessionId,
@@ -290,20 +317,7 @@ export const sendMessage = action({
           type: "enabled",
           budget_tokens: 4000 // Reduced to be less than max_tokens
         },
-        system: `You are the Orchestrator Agent for AURA, a comprehensive development platform. You help users with development tasks, planning, guidance, and problem-solving.
-
-When working through complex problems, think step by step about:
-1. Understanding what the user needs
-2. Breaking down the problem into tasks
-3. Considering the best approach
-4. Planning the solution
-
-Then provide clear, actionable guidance.
-
-Current context:
-- You have access to files, projects, and development tools
-- Always provide thoughtful, step-by-step solutions
-- Be specific and actionable in your recommendations`,
+        system: ORCHESTRATOR_SYSTEM_PROMPT,
         messages: conversationHistory,
       });
 

@@ -16,8 +16,10 @@ import type {
 import type * as chat from "../chat.js";
 import type * as files from "../files.js";
 import type * as identityGuidelines from "../identityGuidelines.js";
+import type * as onboarding from "../onboarding.js";
 import type * as orchestrator from "../orchestrator.js";
 import type * as projects from "../projects.js";
+import type * as prompts from "../prompts.js";
 import type * as socialConnections from "../socialConnections.js";
 import type * as socialPosts from "../socialPosts.js";
 import type * as terminal from "../terminal.js";
@@ -36,8 +38,10 @@ declare const fullApi: ApiFromModules<{
   chat: typeof chat;
   files: typeof files;
   identityGuidelines: typeof identityGuidelines;
+  onboarding: typeof onboarding;
   orchestrator: typeof orchestrator;
   projects: typeof projects;
+  prompts: typeof prompts;
   socialConnections: typeof socialConnections;
   socialPosts: typeof socialPosts;
   terminal: typeof terminal;

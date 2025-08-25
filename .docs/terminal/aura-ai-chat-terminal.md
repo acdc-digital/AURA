@@ -12,7 +12,7 @@ The AURA Platform includes an integrated AI chat terminal powered by Anthropic's
 
 ### 🤖 AI Integration
 
-- **Anthropic Claude 3.5 Sonnet** for intelligent responses
+- **Anthropic Claude 3.7 Sonnet** for intelligent responses
 - **Context-aware** about AURA platform architecture and technologies
 - **Real-time synchronization** with Convex backend storage
 - **Session management** with user authentication integration

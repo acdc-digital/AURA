@@ -3,14 +3,14 @@
 
 "use client";
 
-import { useTerminal } from "@/lib/hooks";
+import { useUser, useOnboarding, useTerminal } from "@/lib/hooks";
 import { useTerminalStore } from "@/lib/store/terminal";
 import { useTerminalSessionStore } from "@/lib/store/terminal-sessions";
 import { useSessionMessages } from "@/lib/hooks/useSessionMessages";
 import { useSessionSync } from "@/lib/hooks/useSessionSync";
 import { useSessionTokens } from "@/lib/hooks/useSessionTokens";
 import { getTokenUsageColor } from "@/lib/utils/tokens";
-import { EnhancedPromptInput } from "@/components/ai/enhanced-prompt-input";
+import { EnhancedPromptInput } from "../../chat";
 import { TerminalMessage } from "../chat/_components/TerminalMessage";
 import { api } from "@/convex/_generated/api";
 import { useConvexAuth } from "convex/react";
@@ -29,6 +29,7 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
   const { isAuthenticated } = useConvexAuth();
   const { saveCommand } = useTerminal();
   const sendMessage = useAction(api.orchestrator.sendMessage);
+  const sendOnboardingWelcome = useAction(api.onboarding.sendWelcomeMessage);
   const { sessions } = useTerminalSessionStore();
   const {
     formattedMessages,
@@ -37,6 +38,7 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
     activeSessionId
   } = useSessionMessages();
   const { createSessionWithSync } = useSessionSync();
+  const { needsOnboarding, isLoading: onboardingLoading } = useOnboarding();
   
   // Token tracking for active session
   const { totalTokens, formatTokenCount, getUsageStatus } = useSessionTokens(activeSessionId);
@@ -381,21 +383,91 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
 
   // Auto-enter chat mode if terminal title is "Chat"
   useEffect(() => {
-    if (terminal?.title === "Chat" && !chatMode && !sessionId) {
+    if (terminal?.title === "Chat" && !chatMode && isAuthenticated && !onboardingLoading) {
       setChatMode(true);
-      const newSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      setSessionId(newSessionId);
       
-      // Add welcome message to buffer
-      addToBuffer(terminalId, `🤖 Welcome to AURA Chat!
+      // Use existing activeSessionId from the session store instead of creating our own
+      if (activeSessionId) {
+        setSessionId(activeSessionId);
+        
+        // If this is onboarding, send welcome message to database
+        if (needsOnboarding) {
+          sendOnboardingWelcome({
+            sessionId: activeSessionId,
+            userId: undefined, // Will be inferred from auth
+          }).catch(console.error);
+        }
+      } else if (sessions.length > 0) {
+        // Use first available session if no active one
+        const firstSessionId = sessions[0].sessionId;
+        setSessionId(firstSessionId);
+        
+        // If this is onboarding, send welcome message to database
+        if (needsOnboarding) {
+          sendOnboardingWelcome({
+            sessionId: firstSessionId,
+            userId: undefined, // Will be inferred from auth
+          }).catch(console.error);
+        }
+      }
+      // If no sessions exist, useSessionSync will create one automatically
+
+      // Dynamic welcome message based on onboarding status
+      const welcomeMessage = needsOnboarding
+        ? `🌟 Welcome to AURA!
+
+I'm your onboarding assistant, powered by Claude 3.7 Sonnet.
+Let me help you get started and learn about AURA's capabilities.
+
+What would you like to know first? I can explain:
+• How to navigate and use AURA
+• Development tools and workflows
+• Project management features
+• Or answer any questions you have!
+
+Type your question below to get started.`
+        : `🤖 Welcome to AURA Chat!
       
-Connected to Orchestrator Agent powered by Claude 3.5 Sonnet.
+Connected to Orchestrator Agent powered by Claude 3.7 Sonnet.
 Ready to help with development tasks, planning, and guidance.
 
 Type your message below to get started.
-Type 'exit' or 'quit' to return to terminal mode.`);
+Type 'exit' or 'quit' to return to terminal mode.`;
+
+      // Add welcome message to buffer
+      addToBuffer(terminalId, welcomeMessage);
     }
-  }, [terminal?.title, chatMode, sessionId, setChatMode, setSessionId, addToBuffer, terminalId]);
+  }, [terminal?.title, chatMode, isAuthenticated, onboardingLoading, needsOnboarding, activeSessionId, sessions, addToBuffer, terminalId, sendOnboardingWelcome]);
+
+  // Enforce onboarding consistency across session switches
+  useEffect(() => {
+    if (chatMode && isAuthenticated && !onboardingLoading && needsOnboarding && activeSessionId) {
+      // If user needs onboarding and we're in chat mode, ensure welcome message is sent
+      // This ensures onboarding is enforced even when switching sessions
+      sendOnboardingWelcome({
+        sessionId: activeSessionId,
+        userId: undefined,
+      }).catch(console.error);
+
+      // Update welcome message in buffer to show onboarding context
+      const onboardingWelcome = `🌟 Welcome to AURA!
+
+I'm your onboarding assistant, powered by Claude 3.7 Sonnet.
+Let me help you get started and learn about AURA's capabilities.
+
+What would you like to know first? I can explain:
+• How to navigate and use AURA
+• Development tools and workflows
+• Project management features
+• Or answer any questions you have!
+
+Type your question below to get started.`;
+
+      // Clear buffer and add onboarding welcome
+      clearBuffer(terminalId);
+      addToBuffer(terminalId, onboardingWelcome);
+    }
+  }, [chatMode, isAuthenticated, onboardingLoading, needsOnboarding, activeSessionId, sendOnboardingWelcome, clearBuffer, addToBuffer, terminalId]);
 
   // Command processor - enhanced with orchestrator chat integration
   const processCommand = useCallback(async (command: string) => {
@@ -624,17 +696,44 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
                   <>
                     {formattedMessages.length === 0 ? (
                       <div className="text-[#858585] py-4">
-                        🤖 Welcome to AURA Chat!
-                        <br />
-                        <br />
-                        Connected to Orchestrator Agent powered by Claude 3.5 Sonnet.
-                        <br />
-                        Ready to help with development tasks, planning, and guidance.
-                        <br />
-                        <br />
-                        Type your message below to get started.
-                        <br />
-                        Type &apos;exit&apos; or &apos;quit&apos; to return to terminal mode.
+                        {needsOnboarding ? (
+                          <>
+                            🌟 Welcome to AURA!
+                            <br />
+                            <br />
+                            I&apos;m your onboarding assistant, powered by Claude 3.7 Sonnet.
+                            <br />
+                            Let me help you get started and learn about AURA&apos;s capabilities.
+                            <br />
+                            <br />
+                            What would you like to know first? I can explain:
+                            <br />
+                            • How to navigate and use AURA
+                            <br />
+                            • Development tools and workflows
+                            <br />
+                            • Project management features
+                            <br />
+                            • Or answer any questions you have!
+                            <br />
+                            <br />
+                            Type your question below to get started.
+                          </>
+                        ) : (
+                          <>
+                            🤖 Welcome to AURA Chat!
+                            <br />
+                            <br />
+                            Connected to Orchestrator Agent powered by Claude 3.7 Sonnet.
+                            <br />
+                            Ready to help with development tasks, planning, and guidance.
+                            <br />
+                            <br />
+                            Type your message below to get started.
+                            <br />
+                            Type &apos;exit&apos; or &apos;quit&apos; to return to terminal mode.
+                          </>
+                        )}
                       </div>
                     ) : (
                       rawMessages.map((message, index) => (

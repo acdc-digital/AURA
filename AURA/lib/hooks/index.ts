@@ -10,6 +10,7 @@ export { useSessionSync } from "./useSessionSync";
 export { useSessionMessages } from "./useSessionMessages";
 export { useSessionTokens } from "./useSessionTokens";
 export { useIdentityGuidelines } from "./useIdentityGuidelines";
+export { useOnboarding } from "./useOnboarding";
 export {
   useTerminal,
   useTerminalHistory,

@@ -23,6 +23,7 @@ AURA is a modern web application built with a pnpm workspace monorepo structure 
 ## UI Design Preferences
 - **NO TOOLTIPS**: Never use tooltips - they are disliked and should be avoided entirely
 - **NO FOCUS RINGS**: Never add focus rings or focus:ring classes - disable them with focus:outline-none only
+- **CURSOR PREFERENCE**: Always use grab/grabbing cursor variants (`cursor-grab` and `active:cursor-grabbing`) instead of resize cursors (`cursor-row-resize`, `cursor-col-resize`, etc.) for any draggable or resizable elements
 - Use terminal-style interfaces with tight, compact design
 - Prefer thin, subtle icons over bold or prominent elements
 

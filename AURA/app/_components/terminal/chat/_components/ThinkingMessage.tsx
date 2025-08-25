@@ -4,9 +4,8 @@
 "use client";
 
 import { FC } from "react";
-import { Task, TaskTrigger, TaskContent, TaskItem, TaskItemFile } from "@/components/ai/task";
-import { Tool, ToolHeader, ToolContent, ToolInput, ToolOutput } from "@/components/ai/tool";
 import { Loader2, Cloud } from "lucide-react";
+import { Task, TaskContent, TaskItem, TaskItemFile, TaskTrigger, Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/app/_components/chat";
 
 interface ThinkingTask {
   id: string;

@@ -92,7 +92,7 @@ export const upsertUser = mutation({
       });
       return existingUser._id;
     } else {
-      // Create new user
+      // Create new user with initial onboarding status
       return await ctx.db.insert("users", {
         clerkId: args.clerkId,
         email: args.email,
@@ -101,6 +101,7 @@ export const upsertUser = mutation({
         username: args.username,
         imageUrl: args.imageUrl,
         name,
+        onboardingStatus: "not_started",
         createdAt: now,
         updatedAt: now,
       });
@@ -369,5 +370,73 @@ export const updateUserPreferences = mutation({
 
     // TODO: Implement user preferences when schema is extended
     throw new ConvexError("User preferences not yet implemented - extend schema first");
+  },
+});
+
+// Query to check if user needs onboarding
+export const needsOnboarding = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return false; // Not authenticated users don't need onboarding
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!user) {
+      return true; // New user needs onboarding
+    }
+
+    // Check onboarding status
+    const status = user.onboardingStatus;
+    return !status || status === "not_started" || status === "in_progress";
+  },
+});
+
+// Mutation to update onboarding status
+export const updateOnboardingStatus = mutation({
+  args: {
+    status: v.union(
+      v.literal("not_started"),
+      v.literal("in_progress"),
+      v.literal("completed"),
+      v.literal("skipped")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new ConvexError("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!user) {
+      throw new ConvexError("User not found");
+    }
+
+    const updateData: {
+      onboardingStatus: "not_started" | "in_progress" | "completed" | "skipped";
+      updatedAt: number;
+      onboardingCompletedAt?: number;
+    } = {
+      onboardingStatus: args.status,
+      updatedAt: Date.now(),
+    };
+
+    // Set completion timestamp for completed/skipped status
+    if (args.status === "completed" || args.status === "skipped") {
+      updateData.onboardingCompletedAt = Date.now();
+    }
+
+    await ctx.db.patch(user._id, updateData);
+    return user._id;
   },
 });

@@ -4,8 +4,7 @@
 "use client";
 
 import { FC, useState } from "react";
-import { Actions, Action } from "@/components/ai/actions";
-import { Response } from "@/components/ai/response";
+import { Action, Actions, Response } from "@/app/_components/chat";
 import { Copy, RotateCcw, ThumbsUp, ThumbsDown, User } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { ThinkingMessage } from "./ThinkingMessage";

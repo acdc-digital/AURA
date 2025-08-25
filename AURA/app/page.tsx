@@ -11,14 +11,28 @@ import { Terminal } from "./_components/terminal";
 import { AuthWrapper } from "@/app/_components/auth/AuthWrapper";
 import { useSidebarStore } from "@/lib/store";
 import { useTerminalStore } from "@/lib/store/terminal";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { useState, useCallback } from "react";
+import { useOnboarding } from "@/lib/hooks";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { useState, useCallback, useEffect } from "react";
 
 export default function HomePage() {
   const { activePanel, setActivePanel } = useSidebarStore();
-  const { isCollapsed } = useTerminalStore();
+  const { isCollapsed, setCollapsed } = useTerminalStore();
+  const { needsOnboarding } = useOnboarding();
   const [terminalHeight, setTerminalHeight] = useState(40); // Height as percentage of viewport
   const [isResizing, setIsResizing] = useState(false);
+
+  // Auto-expand terminal for onboarding (only once, don't force it to stay open)
+  useEffect(() => {
+    if (needsOnboarding && isCollapsed) {
+      // Only auto-expand on first load, not when user manually collapses
+      const hasAutoExpanded = sessionStorage.getItem('terminal-auto-expanded-for-onboarding');
+      if (!hasAutoExpanded) {
+        setCollapsed(false);
+        sessionStorage.setItem('terminal-auto-expanded-for-onboarding', 'true');
+      }
+    }
+  }, [needsOnboarding, isCollapsed, setCollapsed]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (isCollapsed) return;
@@ -112,8 +126,9 @@ export default function HomePage() {
               {/* Resize handle - only show when expanded */}
               {!isCollapsed && (
                 <div
-                  className="absolute top-0 left-0 right-0 h-1 cursor-row-resize z-20"
+                  className="absolute top-0 left-0 right-0 h-2 cursor-grab active:cursor-grabbing z-40 bg-transparent"
                   onMouseDown={handleMouseDown}
+                  title="Drag to resize terminal"
                 />
               )}
               <Terminal />
@@ -137,7 +152,7 @@ export default function HomePage() {
 
           <div className="flex items-center space-x-4">
             <span className="text-[#cccccc]">▲ Next.js ^15 | Convex</span>
-            <span>Anthropic Claude 3.5 Sonnet</span>
+            <span>Anthropic Claude 3.7 Sonnet</span>
             <span className="text-[#858585]">
               MCP Server: 0
             </span>

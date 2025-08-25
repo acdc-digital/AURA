@@ -3,12 +3,7 @@
 
 "use client";
 
-import { EnhancedPromptInput } from '@/components/ai/enhanced-prompt-input';
-import {
-  Conversation,
-  ConversationContent,
-  ConversationScrollButton,
-} from '@/components/ai/conversation';
+import { Conversation, ConversationContent, ConversationScrollButton, EnhancedPromptInput } from '@/app/_components/chat';
 import { useState } from 'react';
 
 export function ChatMessages() {

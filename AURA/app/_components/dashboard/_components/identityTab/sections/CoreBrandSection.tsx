@@ -115,7 +115,7 @@ export function CoreBrandSection({ guidelines, isReadOnly = false, onSave }: Cor
         {/* Left Column - Basic Information */}
         <div className="space-y-6">
           {/* Business Identity Card */}
-          <div className="bg-[#2d2d30] border border-[#454545] rounded-lg p-6">
+          <div className="bg-[#2d2d30] border border-[#454545] p-6">
             <div className="flex items-center gap-2 mb-4">
               <Building2 className="w-4 h-4 text-[#007acc]" />
               <h3 className="text-md font-semibold text-[#cccccc]">Business Identity</h3>
@@ -171,7 +171,7 @@ export function CoreBrandSection({ guidelines, isReadOnly = false, onSave }: Cor
         {/* Right Column - Purpose & Vision */}
         <div className="space-y-6">
           {/* Mission & Vision Card */}
-          <div className="bg-[#2d2d30] border border-[#454545] rounded-lg p-6">
+          <div className="bg-[#2d2d30] border border-[#454545] p-6">
             <div className="flex items-center gap-2 mb-4">
               <Target className="w-4 h-4 text-[#007acc]" />
               <h3 className="text-md font-semibold text-[#cccccc]">Purpose & Vision</h3>
@@ -215,7 +215,7 @@ export function CoreBrandSection({ guidelines, isReadOnly = false, onSave }: Cor
           </div>
 
           {/* Core Values Card */}
-          <div className="bg-[#2d2d30] border border-[#454545] rounded-lg p-6">
+          <div className="bg-[#2d2d30] border border-[#454545] p-6">
             <div className="flex items-center gap-2 mb-4">
               <Heart className="w-4 h-4 text-[#007acc]" />
               <h3 className="text-md font-semibold text-[#cccccc]">Core Values</h3>

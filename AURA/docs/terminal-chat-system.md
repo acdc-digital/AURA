@@ -2,7 +2,7 @@
 
 ## Overview
 
-AURA's terminal chat system provides a multi-session conversational interface powered by Claude 3.5 Sonnet through our Orchestrator Agent. The system enables users to maintain multiple isolated chat sessions with persistent history and real-time synchronization.
+AURA's terminal chat system provides a multi-session conversational interface powered by Claude 3.7 Sonnet through our Orchestrator Agent. The system enables users to maintain multiple isolated chat sessions with persistent history and real-time synchronization.
 
 ## Chat Flow Analysis
 
@@ -34,7 +34,7 @@ Let's trace what happens when a user begins a chat with "hi":
       - Adds current "hi" message to the conversation array
    
    d. Prepare Claude API Request:
-      - Model: claude-3-5-sonnet-20241022
+      - Model: claude-3-7-sonnet-20250219
       - Max tokens: 4000
       - Temperature: 0.7
       - System prompt: ORCHESTRATOR_SYSTEM_PROMPT
@@ -158,8 +158,8 @@ Engage naturally and help users accomplish their development goals within the AU
 ### API Configuration
 
 ```typescript
-// Claude 3.5 Sonnet Configuration
-model: "claude-3-5-sonnet-20241022"
+// Claude 3.7 Sonnet Configuration
+model: "claude-3-7-sonnet-20250219"
 max_tokens: 4000
 temperature: 0.7
 system: ORCHESTRATOR_SYSTEM_PROMPT
