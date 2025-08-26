@@ -99,24 +99,30 @@ export const sendWelcomeMessage = action({
     userId: v.optional(v.string()),
   },
   handler: async (ctx, { sessionId, userId }) => {
-    const welcomeMessage = `Welcome to AURA! 🌟
+    const welcomeMessage = `Time to grow your Aura.
 
-I'm here to help you get started with your brand and content creation journey. You have a few options:
+Let's get started by creating your brand identity. You can skip the setup and add the details later, or begin by simply letting me know the name of your brand or product.`;
 
-**Option 1: Quick Setup** - I can guide you through creating your first brand guidelines and project structure (recommended for new users)
-
-**Option 2: Skip & Explore** - Jump right in and start exploring AURA on your own
-
-If you'd like me to help you get started, what's the name of your product or brand? If you don't have one yet, that's perfectly fine - we can work with your name or any project you're excited about!
-
-*You can always skip this onboarding and return to it later from your settings.*`;
-
-    // Save the welcome message
-    await ctx.runMutation(api.chat.addMessage, {
+    // Save the welcome message with interactive skip button
+    const messageId = await ctx.runMutation(api.chat.addMessage, {
       role: "assistant",
       content: welcomeMessage,
       sessionId,
       userId,
+      tokenCount: welcomeMessage.length, // Rough token count
+      inputTokens: 0, // No input tokens for welcome message
+      outputTokens: Math.ceil(welcomeMessage.length / 4), // Estimate output tokens
+      interactiveComponent: {
+        type: "onboarding_skip_button",
+        data: { label: "Skip" },
+        status: "pending",
+      },
+    });
+
+    console.log("✅ Onboarding welcome message created:", {
+      messageId,
+      sessionId,
+      hasInteractiveComponent: true
     });
 
     return welcomeMessage;
@@ -146,6 +152,39 @@ export const completeOnboarding = mutation({
     });
 
     return { projectId: projectId.toString() };
+  },
+});
+
+// Action to handle complete skip workflow
+export const handleSkipOnboarding = action({
+  args: {
+    sessionId: v.string(),
+    userId: v.optional(v.string()),
+  },
+  handler: async (ctx, { sessionId, userId }) => {
+    try {
+      // Update user onboarding status to skipped
+      await ctx.runMutation(api.users.updateOnboardingStatus, {
+        status: "skipped",
+      });
+
+      // Send orchestrator welcome message
+      await ctx.runAction(api.orchestrator.sendWelcomeMessage, {
+        sessionId,
+        userId,
+      });
+
+      return {
+        success: true,
+        message: "Onboarding skipped successfully. Orchestrator welcome message sent.",
+      };
+    } catch (error) {
+      console.error("Error handling skip onboarding:", error);
+      return {
+        success: false,
+        error: "Failed to skip onboarding",
+      };
+    }
   },
 });
 

@@ -111,8 +111,14 @@ export default function HomePage() {
             {/* Sidebar - Fixed width */}
             <DashSidebar activePanel={activePanel} />
 
-            {/* Dashboard/Editor - Full height */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Dashboard/Editor - Full height with space for terminal */}
+            <div
+              className="flex-1 flex flex-col overflow-hidden"
+              style={{
+                paddingBottom: isCollapsed ? '35px' : `${terminalHeight}vh`,
+                transition: isResizing ? 'none' : 'padding-bottom 200ms'
+              }}
+            >
               <Navigator />
             </div>
 

@@ -45,7 +45,23 @@ export const OrchestratorAgent: FC<OrchestratorAgentProps> = ({
   });
   
   // Memoize messages to prevent unnecessary re-renders
-  const messages = useMemo(() => messagesData ?? [], [messagesData]);
+  const messages = useMemo(() => {
+    const msgs = messagesData ?? [];
+    
+    // Debug logging for interactive components
+    msgs.forEach(msg => {
+      if (msg.interactiveComponent) {
+        console.log("🎯 OrchestratorAgent - Message with interactive component:", {
+          messageId: msg._id,
+          type: msg.interactiveComponent.type,
+          status: msg.interactiveComponent.status,
+          content: msg.content?.substring(0, 50) + "..."
+        });
+      }
+    });
+    
+    return msgs;
+  }, [messagesData]);
 
   // Handle session update
   useEffect(() => {

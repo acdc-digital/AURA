@@ -414,18 +414,9 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
 
       // Dynamic welcome message based on onboarding status
       const welcomeMessage = needsOnboarding
-        ? `🌟 Welcome to AURA!
+        ? `🌟 AURA Onboarding Active
 
-I'm your onboarding assistant, powered by Claude 3.7 Sonnet.
-Let me help you get started and learn about AURA's capabilities.
-
-What would you like to know first? I can explain:
-• How to navigate and use AURA
-• Development tools and workflows
-• Project management features
-• Or answer any questions you have!
-
-Type your question below to get started.`
+Your personalized onboarding assistant is ready below.`
         : `🤖 Welcome to AURA Chat!
       
 Connected to Orchestrator Agent powered by Claude 3.7 Sonnet.

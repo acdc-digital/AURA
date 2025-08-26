@@ -477,6 +477,46 @@ export const sendMessage = action({
   },
 });
 
+// Action to send orchestrator welcome message (after skipping onboarding)
+export const sendWelcomeMessage = action({
+  args: {
+    sessionId: v.string(),
+    userId: v.optional(v.string()),
+  },
+  handler: async (ctx, { sessionId, userId }) => {
+    const welcomeMessage = `Welcome to AURA! 🌟
+
+I'm your orchestrator agent, ready to help you build, create, and grow your projects. Since you've chosen to skip the onboarding, you can dive right in and explore at your own pace.
+
+Here's what I can help you with:
+• **Project Management**: Create and organize your projects
+• **Development Tasks**: Code reviews, debugging, and technical guidance
+• **Architecture Planning**: System design and best practices
+• **Problem Solving**: Break down complex challenges into manageable steps
+
+What would you like to work on today?`;
+
+    // Save the welcome message
+    const messageId = await ctx.runMutation(api.orchestrator.saveChatMessage, {
+      role: "assistant",
+      content: welcomeMessage,
+      sessionId,
+      userId,
+      tokenCount: welcomeMessage.length,
+      inputTokens: 0,
+      outputTokens: Math.ceil(welcomeMessage.length / 4),
+    });
+
+    console.log("🎯 Orchestrator welcome message sent:", {
+      messageId,
+      sessionId,
+      userId
+    });
+
+    return welcomeMessage;
+  },
+});
+
 // Get session info
 export const getSessionInfo = query({
   args: {

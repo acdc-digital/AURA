@@ -4,10 +4,11 @@
 "use client";
 
 import { FC, useState } from "react";
-import { Action, Actions, Response } from "@/app/_components/chat";
+import { Action, Actions, TypewriterResponse } from "@/app/_components/chat";
 import { Copy, RotateCcw, ThumbsUp, ThumbsDown, User } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { ThinkingMessage } from "./ThinkingMessage";
+import { OnboardingSkipButton } from "./OnboardingSkipButton";
 
 interface TerminalMessageProps {
   message: {
@@ -26,6 +27,13 @@ interface TerminalMessageProps {
     operation?: {
       type: string;
       details?: unknown;
+    };
+    // Interactive component for user input collection
+    interactiveComponent?: {
+      type: string;
+      data?: unknown;
+      status: "pending" | "completed" | "cancelled";
+      result?: unknown;
     };
   };
   isLast?: boolean;
@@ -46,6 +54,17 @@ export const TerminalMessage: FC<TerminalMessageProps> = ({
     (message.tokenCount === undefined || message.tokenCount === 0) &&
     (message.inputTokens === undefined || message.inputTokens === 0) &&
     (message.outputTokens === undefined || message.outputTokens === 0);
+
+  // Debug logging for interactive components (can be removed in production)
+  if (message.interactiveComponent && process.env.NODE_ENV === 'development') {
+    console.log("🔍 TerminalMessage - Interactive component found:", {
+      type: message.interactiveComponent.type,
+      status: message.interactiveComponent.status,
+      messageId: message._id,
+      isStreaming,
+      shouldRender: !isStreaming && message.interactiveComponent.status === "pending"
+    });
+  }
 
   // Format message for terminal display  
   const formatMessage = (msg: TerminalMessageProps['message']) => {
@@ -118,14 +137,37 @@ export const TerminalMessage: FC<TerminalMessageProps> = ({
                   <span className="inline-block w-2 h-4 bg-[#4ec9b0] ml-1 animate-pulse" />
                 )}
               </div>
-              {/* Render assistant response with streaming-optimized markdown - indented */}
+              {/* Render assistant response with typewriter effect for streaming */}
               <div data-role="assistant" className="pl-6">
-                <Response
+                <TypewriterResponse
+                  isStreaming={isStreaming}
                   parseIncompleteMarkdown={isStreaming}
+                  typewriterSpeed={40}
                   className="text-[#cccccc] leading-relaxed"
                 >
                   {formatMessage(message)}
-                </Response>
+                </TypewriterResponse>
+                
+                {/* Interactive Components - only show for completed messages */}
+                {!isStreaming && message.interactiveComponent && message.interactiveComponent.status === "pending" && (
+                  <div className="mt-3">
+                    {message.interactiveComponent.type === "onboarding_skip_button" && (
+                      <>
+                        {console.log("🎬 Rendering OnboardingSkipButton", {
+                          messageId: message._id,
+                          isStreaming,
+                          status: message.interactiveComponent.status
+                        })}
+                        <OnboardingSkipButton
+                          messageId={message._id}
+                          onSkipped={() => {
+                            console.log("👋 Skip button clicked");
+                          }}
+                        />
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ) : (

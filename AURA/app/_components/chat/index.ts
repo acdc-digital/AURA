@@ -8,5 +8,7 @@ export * from "./prompt-input";
 export * from "./enhanced-prompt-input";
 export * from "./code-block";
 export * from "./actions";
+export * from "./typewriter-text";
+export * from "./typewriter-response";
 export * from "./tool";
 export * from "./task";

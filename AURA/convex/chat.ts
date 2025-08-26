@@ -44,7 +44,8 @@ export const addMessage = mutation({
         v.literal("file_selector"),
         v.literal("edit_instructions_input"),
         v.literal("multi_file_selector"),
-        v.literal("url_input")
+        v.literal("url_input"),
+        v.literal("onboarding_skip_button")
       ),
       data: v.optional(v.any()),
       status: v.union(v.literal("pending"), v.literal("completed"), v.literal("cancelled")),
@@ -105,6 +106,16 @@ export const getMessages = query({
       .take(limit);
     
     return messages.reverse();
+  },
+});
+
+// Get a single message by ID
+export const getMessage = query({
+  args: {
+    messageId: v.id("chatMessages"),
+  },
+  handler: async (ctx, { messageId }) => {
+    return await ctx.db.get(messageId);
   },
 });
 
@@ -388,5 +399,29 @@ export const getSessionTokens = query({
     }
     
     return null;
+  },
+});
+
+// Update interactive component status
+export const updateInteractiveComponent = mutation({
+  args: {
+    messageId: v.id("chatMessages"),
+    status: v.union(v.literal("pending"), v.literal("completed"), v.literal("cancelled")),
+    result: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId);
+    
+    if (!message || !message.interactiveComponent) {
+      throw new Error("Message or interactive component not found");
+    }
+
+    await ctx.db.patch(args.messageId, {
+      interactiveComponent: {
+        ...message.interactiveComponent,
+        status: args.status,
+        result: args.result,
+      },
+    });
   },
 });

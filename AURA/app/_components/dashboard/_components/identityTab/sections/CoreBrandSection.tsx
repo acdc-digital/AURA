@@ -3,22 +3,19 @@
 
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { useIdentityGuidelines, IdentityGuidelines } from '@/lib/hooks';
-import { Building2, Target, Heart, Plus, X, Save, CheckCircle, AlertCircle } from 'lucide-react';
+import { IdentityGuidelines } from '@/lib/hooks';
+import { Building2, Target, Heart, Plus, X } from 'lucide-react';
 
 interface CoreBrandSectionProps {
   guidelines: IdentityGuidelines;
   isReadOnly?: boolean;
-  onSave?: () => void;
 }
 
-export function CoreBrandSection({ guidelines, isReadOnly = false, onSave }: CoreBrandSectionProps) {
-  const { updateCoreBrand } = useIdentityGuidelines();
-  
+export function CoreBrandSection({ guidelines, isReadOnly = false }: CoreBrandSectionProps) {
   const [formData, setFormData] = useState({
     businessName: guidelines?.businessName || '',
     brandSlogan: guidelines?.brandSlogan || '',
@@ -29,8 +26,6 @@ export function CoreBrandSection({ guidelines, isReadOnly = false, onSave }: Cor
   });
 
   const [newValue, setNewValue] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -53,64 +48,8 @@ export function CoreBrandSection({ guidelines, isReadOnly = false, onSave }: Cor
     }));
   };
 
-  const handleSave = useCallback(async () => {
-    if (isReadOnly) return;
-    
-    setIsSaving(true);
-    setSaveStatus('idle');
-    try {
-      await updateCoreBrand(formData);
-      setSaveStatus('success');
-      onSave?.();
-    } catch (error) {
-      console.error('Failed to save core brand info:', error);
-      setSaveStatus('error');
-    } finally {
-      setIsSaving(false);
-      // Clear status after 3 seconds
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    }
-  }, [formData, updateCoreBrand, onSave, isReadOnly]);
-
-  // Calculate completion percentage
-  const completionPercentage = () => {
-    const fields = [
-      formData.businessName,
-      formData.missionStatement,
-      formData.visionStatement,
-      formData.businessDescription,
-      formData.coreValues.length > 0 ? 'values' : ''
-    ];
-    const completed = fields.filter(field => field && field.length > 0).length;
-    return Math.round((completed / fields.length) * 100);
-  };
-
   return (
     <div className="space-y-8">
-      {/* Header with Progress */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <Building2 className="w-5 h-5 text-[#cccccc]" />
-          <h2 className="text-lg font-semibold text-[#cccccc]">Brand Foundation</h2>
-        </div>
-        <p className="text-sm text-[#858585] mb-4">
-          Define your brand&apos;s fundamental essence, purpose, and strategic direction. This foundation guides all other brand guidelines and ensures consistency across touchpoints.
-        </p>
-        
-        {/* Progress indicator */}
-        <div className="flex items-center gap-2 mb-6">
-          <div className="flex-1 h-2 bg-[#2d2d30] rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-[#007acc] transition-all duration-300"
-              style={{ width: `${completionPercentage()}%` }}
-            />
-          </div>
-          <span className="text-xs text-[#858585] font-medium">
-            {completionPercentage()}% Complete
-          </span>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Basic Information */}
         <div className="space-y-6">
@@ -281,49 +220,6 @@ export function CoreBrandSection({ guidelines, isReadOnly = false, onSave }: Cor
           </div>
         </div>
       </div>
-
-      {/* Save Section */}
-      {!isReadOnly && (
-        <div className="flex items-center justify-between pt-6 border-t border-[#2d2d30]">
-          <div className="flex items-center gap-2">
-            {saveStatus === 'success' && (
-              <>
-                <CheckCircle className="w-4 h-4 text-green-400" />
-                <span className="text-sm text-green-400">Brand foundation saved successfully</span>
-              </>
-            )}
-            {saveStatus === 'error' && (
-              <>
-                <AlertCircle className="w-4 h-4 text-red-400" />
-                <span className="text-sm text-red-400">Error saving changes. Please try again.</span>
-              </>
-            )}
-            {saveStatus === 'idle' && (
-              <span className="text-xs text-[#858585]">
-                {formData.businessName ? 'Ready to save changes' : 'Business name is required'}
-              </span>
-            )}
-          </div>
-          
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || !formData.businessName.trim()}
-            className="bg-[#007acc] hover:bg-[#005a9e] text-white disabled:opacity-50"
-          >
-            {isSaving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                Save Brand Foundation
-              </>
-            )}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

@@ -17,6 +17,9 @@ export function useOnboarding() {
   // Send welcome message action
   const sendWelcome = useAction(api.onboarding.sendWelcomeMessage);
   
+  // Handle complete skip workflow
+  const handleSkipOnboarding = useAction(api.onboarding.handleSkipOnboarding);
+  
   return {
     user,
     needsOnboarding: !userLoading && needsOnboarding,
@@ -24,6 +27,7 @@ export function useOnboarding() {
     onboardingStatus: user?.onboardingStatus,
     updateOnboardingStatus,
     sendWelcome,
+    handleSkipOnboarding,
     
     // Helper methods
     startOnboarding: () => updateOnboardingStatus({ status: "in_progress" }),

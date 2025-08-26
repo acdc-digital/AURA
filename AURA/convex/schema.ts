@@ -59,6 +59,7 @@ export default defineSchema({
           v.literal("edit_instructions_input"),
           v.literal("multi_file_selector"),
           v.literal("url_input"),
+          v.literal("onboarding_skip_button"),
         ),
         data: v.optional(v.any()),
         status: v.union(

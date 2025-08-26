@@ -274,9 +274,11 @@ export const update = mutation({
       status = "in-progress";
     }
 
-    // Update the guidelines
+    // Update the guidelines (exclude id from the patch)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _id, ...updateData } = args;
     await ctx.db.patch(args.id!, {
-      ...args,
+      ...updateData,
       status,
       completionPercentage: args.completionPercentage || completionPercentage,
       version: (existingGuidelines.version || 1) + 1,

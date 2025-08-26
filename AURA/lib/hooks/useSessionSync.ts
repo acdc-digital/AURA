@@ -100,25 +100,15 @@ export function useSessionSync() {
         }
         
         syncedRef.current = true;
+        
+        // If no sessions exist after sync, create initial session
+        if (syncedSessions.length === 0 && store.sessions.length === 0) {
+          console.log('📝 No sessions found, creating initial session...');
+          createSessionWithSync('Terminal Chat').catch(console.error);
+        }
       }
     }
-  }, [convexSessions, isAuthenticated, userId]);
-  
-  // Create initial session if none exist
-  useEffect(() => {
-    if (isAuthenticated && userId && convexSessions && convexSessions.length === 0) {
-      const store = useTerminalSessionStore.getState();
-      
-      // Only create if we haven't already created one locally
-      if (store.sessions.length === 0) {
-        createSessionMutation({
-          sessionId: crypto.randomUUID(),
-          title: "Terminal Chat",
-          userId,
-        }).catch(console.error);
-      }
-    }
-  }, [isAuthenticated, userId, convexSessions, createSessionMutation]);
+  }, [convexSessions, isAuthenticated, userId, createSessionWithSync]);
   
   // Sync session to Convex
   const syncSessionToConvex = useCallback(async (sessionId: string, updates: Partial<ChatSession>) => {

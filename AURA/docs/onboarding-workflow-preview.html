@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AURA Onboarding Agent Workflow</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .description {
+            background: #e8f4fd;
+            padding: 20px;
+            border-left: 4px solid #3498db;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        #diagram {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .feature-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        .feature-card h3 {
+            color: #495057;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AURA Onboarding Agent Workflow</h1>
+        
+        <div class="description">
+            <p><strong>This diagram visualizes the complete workflow of AURA's onboarding agent when paired with the brand identity guidelines system.</strong></p>
+            <p>The flow shows how new users are welcomed, guided through brand setup, and seamlessly integrated into the AURA platform with a complete brand identity foundation.</p>
+        </div>
+
+        <div id="diagram">
+            <div class="mermaid">
+flowchart TD
+    %% User Entry Points
+    Start(["`**User Visits AURA**`"]) --> AuthCheck{"`**Authenticated?**`"}
+    
+    %% Authentication Flow
+    AuthCheck -->|No| Login["`**Login/Signup**`"]
+    Login --> OnboardingCheck
+    AuthCheck -->|Yes| OnboardingCheck{"`**Onboarding Status?**`"}
+    
+    %% Onboarding Decision
+    OnboardingCheck -->|New User| WelcomeAgent["`**🤖 Onboarding Agent**
+    _Welcome Message_`"]
+    OnboardingCheck -->|Completed| Dashboard["`**Main Dashboard**`"]
+    OnboardingCheck -->|Skipped| Dashboard
+    
+    %% Welcome and Options
+    WelcomeAgent --> UserChoice{"`**User Choice**`"}
+    UserChoice -->|Quick Setup| BrandInfo["`**📝 Collect Brand Info**
+    _Name, Description, Goals_`"]
+    UserChoice -->|Skip & Explore| SkipOnboarding["`**Skip Onboarding**
+    _Mark as skipped_`"]
+    
+    %% Brand Information Collection
+    BrandInfo --> BrandDetails{"`**Brand Details Complete?**`"}
+    BrandDetails -->|Incomplete| MoreInfo["`**🔄 Request More Info**
+    _Conversational prompts_`"]
+    MoreInfo --> BrandInfo
+    
+    %% Brand Guidelines Generation
+    BrandDetails -->|Complete| CreateGuidelines["`**🎨 Generate Guidelines**
+    _Using brand identity elements_`"]
+    
+    %% Identity Guidelines Components
+    CreateGuidelines --> GuidelineElements{"`**📋 Brand Guidelines**
+    _Based on .docs/marketing/_`"}
+    
+    subgraph BrandComponents ["`**Brand Identity Components**`"]
+        direction TB
+        BrandOverview["`**1. Brand Overview**
+        • Mission/Vision/Values
+        • Brand Story
+        • Target Audience
+        • Key Messaging`"]
+        
+        LogoSpecs["`**2. Logo Guidelines**
+        • Primary/Secondary logos
+        • Clear space & sizing
+        • Color variations
+        • Usage do's/don'ts`"]
+        
+        ColorPalette["`**3. Color System**
+        • Primary colors
+        • Secondary/Accent colors
+        • CMYK/RGB/Hex codes
+        • Usage guidelines`"]
+        
+        Typography["`**4. Typography**
+        • Primary/Secondary fonts
+        • Hierarchy rules
+        • Web/System fonts
+        • Usage examples`"]
+        
+        VisualStyle["`**5. Visual Style**
+        • Photography style
+        • Illustration guidelines
+        • Iconography
+        • Data visualization`"]
+        
+        VoiceAndTone["`**6. Voice & Messaging**
+        • Brand voice attributes
+        • Key message frameworks
+        • Grammar rules
+        • Term glossary`"]
+        
+        Applications["`**7. Applications**
+        • Website/Digital
+        • Marketing materials
+        • Stationery
+        • Signage`"]
+        
+        Legal["`**8. Legal & Resources**
+        • Trademark info
+        • Usage rights
+        • Contact information
+        • Asset library`"]
+    end
+    
+    GuidelineElements --> BrandComponents
+    
+    %% Project Creation
+    BrandComponents --> CreateProject["`**📁 Create First Project**
+    _Initialize project structure_`"]
+    
+    %% File Structure Setup
+    CreateProject --> FileStructure["`**🗂️ Generate File Structure**`"]
+    
+    subgraph ProjectFiles ["`**Generated Project Files**`"]
+        direction TB
+        BrandGuideDoc["`**brand-guidelines.md**
+        _Complete guidelines document_`"]
+        
+        ProjectConfig["`**project-config.json**
+        _Project metadata & settings_`"]
+        
+        AssetFolders["`**Asset Directories**
+        • /logos
+        • /colors
+        • /fonts
+        • /templates`"]
+        
+        ContentTemplates["`**Content Templates**
+        • Social media templates
+        • Marketing materials
+        • Presentation templates`"]
+    end
+    
+    FileStructure --> ProjectFiles
+    
+    %% Database Operations
+    ProjectFiles --> SaveToDB["`**💾 Save to Convex DB**`"]
+    
+    subgraph ConvexDB ["`**Database Operations**`"]
+        direction TB
+        UserUpdate["`**Update User Record**
+        _Mark onboarding complete_`"]
+        
+        CreateGuideline["`**Create Identity Guidelines**
+        _Store in identityGuidelines table_`"]
+        
+        CreateProjectDB["`**Create Project Record**
+        _Store in projects table_`"]
+        
+        SaveFiles["`**Save Files**
+        _Store in files table_`"]
+    end
+    
+    SaveToDB --> ConvexDB
+    
+    %% Completion Flow
+    ConvexDB --> OnboardingComplete["`**✅ Onboarding Complete**
+    _Success confirmation_`"]
+    
+    OnboardingComplete --> Dashboard
+    SkipOnboarding --> Dashboard
+    
+    %% Dashboard Features
+    subgraph DashboardFeatures ["`**AURA Platform Features**`"]
+        direction TB
+        ProjectManagement["`**📋 Project Management**`"]
+        ContentCreation["`**✍️ Content Creation**`"]
+        BrandAssets["`**🎨 Brand Asset Library**`"]
+        Collaboration["`**👥 Team Collaboration**`"]
+        Analytics["`**📊 Analytics & Insights**`"]
+    end
+    
+    Dashboard --> DashboardFeatures
+    
+    %% Error Handling
+    CreateGuidelines -->|API Error| ErrorHandler["`**⚠️ Error Handler**
+    _Graceful degradation_`"]
+    SaveToDB -->|Database Error| ErrorHandler
+    ErrorHandler --> RetryPrompt{"`**Retry?**`"}
+    RetryPrompt -->|Yes| CreateGuidelines
+    RetryPrompt -->|No| PartialSetup["`**🔧 Partial Setup**
+    _Continue with basic project_`"]
+    PartialSetup --> Dashboard
+    
+    %% Styling
+    classDef agentNode fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef processNode fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef dataNode fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef errorNode fill:#ffebee,stroke:#b71c1c,stroke-width:2px
+    classDef componentNode fill:#fff3e0,stroke:#e65100,stroke-width:1px
+    
+    class WelcomeAgent,OnboardingAgent agentNode
+    class CreateGuidelines,CreateProject,FileStructure,SaveToDB processNode
+    class BrandComponents,ProjectFiles,ConvexDB,DashboardFeatures dataNode
+    class ErrorHandler,RetryPrompt,PartialSetup errorNode
+    class BrandOverview,LogoSpecs,ColorPalette,Typography,VisualStyle,VoiceAndTone,Applications,Legal componentNode
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <h3>🤖 AI-Powered Guidance</h3>
+                <p>Conversational agent with context awareness guides users through the entire onboarding process with personalized interactions.</p>
+            </div>
+            <div class="feature-card">
+                <h3>📋 Comprehensive Guidelines</h3>
+                <p>Based on industry best practices, generates complete brand identity covering all 8 essential components for professional branding.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🔄 Flexible Flow</h3>
+                <p>Users can skip, retry, or continue at any point. The system respects user autonomy while encouraging engagement.</p>
+            </div>
+            <div class="feature-card">
+                <h3>💾 Real-time Persistence</h3>
+                <p>Convex backend ensures data consistency with proper relationships, indexing, and real-time synchronization.</p>
+            </div>
+            <div class="feature-card">
+                <h3>⚠️ Error Resilience</h3>
+                <p>Graceful handling of API or database issues with retry mechanisms and partial setup options.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🎨 Professional Output</h3>
+                <p>Complete brand identity system with organized file structure, templates, and guidelines ready for immediate use.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                background: '#ffffff',
+                primaryColor: '#e1f5fe',
+                primaryTextColor: '#01579b',
+                primaryBorderColor: '#01579b',
+                lineColor: '#666',
+                secondaryColor: '#f3e5f5',
+                tertiaryColor: '#e8f5e8'
+            },
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>
