@@ -1,139 +1,187 @@
-# AURA - Agentic Social Media Audience Control Platform
+# AURA
+**v2.1** | **5 agents online** | **∞ uptime** | **console ready**
 
 > **Proprietary Software** - Copyright © 2025 ACDC Digital. All rights reserved.
 
-## What is AURA?
+```bash
+$ aura --status
+✓ AURA SOCIAL INTELLIGENCE PLATFORM
+✓ 5 AGENTS ACTIVE
+✓ EXTENSIONS FROM $0.10
+✓ FREE TIER UNLIMITED
+✓ 24/7 AUTOMATION
+✓ CONSOLE READY
+```
 
-AURA is an **agentic social media audience control and management platform** that lets you vibe-code your entire media and brand strategy. From creating your brand identity to publishing scheduled content at perfect cadence, AURA connects powerful AI agents with media tools to automate and optimize your social media presence.
+## Agentic Social Intelligence
 
-### The Vision
-Transform how creators, builders, and businesses approach social media by providing an AI-powered agency-in-a-box that handles everything from brand development to content distribution.
+**Build Your Social Media Empire**
 
-## Who AURA is For
+Build your social media empire without breaking the bank. No monthly subscriptions, no hidden fees — just transparent pay-per-use pricing for premium features. Core automation agents are always free.
 
-### **New App Builders & Vibe-Coders** (Starting Here)
-- Have great ideas but don't know how to get to market
-- Want to build their brand and audience while focusing on their product
-- Need professional social media presence without the complexity
+🚀 **10x Faster Growth** | 💰 **$0 Start Free** | ∞ **Possibilities**
 
-### **Influencers & Content Creators** (Next Phase)
-- Want granular control over their media strategy
-- Need consistent, high-quality content at scale
-- Desire sophisticated audience engagement tools
+## Console Experience
 
-### **Teams & Organizations** (Future Phase)
-- Collaborative content creation and approval workflows
-- Brand consistency across team members
-- Advanced analytics and reporting
+```bash
+$ aura agents status
+✓ onboarding.agent - Active (Core/Free)
+✓ content-creator.agent - Active (Core/Free)
+✓ brand-strategist.agent - Active (Core/Free)
+✓ scheduler.agent - Active (Core/Free)
+→ analytics.agent - Extension ($0.15/report)
 
-### **Enterprise & Broadcasting** (Long-term)
-- Large-scale information distribution
-- Multi-channel communication strategies
-- Custom enterprise solutions
+$ aura onboard --product="AI SaaS Platform"
+🤖 Onboarding Agent: Analyzing your product...
+→ Building brand persona...
+→ Researching target audience...
+✓ Brand strategy complete
 
-## How AURA Works
+$ aura content create --mode=auto
+🎨 Content Creator: Generating post ideas...
+📊 Brand Strategist: Ensuring voice consistency...
+⏰ Scheduler: Optimizing post timing...
+✓ 7 posts scheduled for this week
 
-### First-Time User Experience
-1. **Welcome by Onboarding Agent**: Asks targeted questions about your product, audience, and goals
-2. **Brand Strategy Development**: AI builds your brand reference and content strategy
-3. **Choose Your Mode**:
-   - **Auto Mode**: Orchestrator agent selects the best tool for each task
-   - **Manual Mode**: Select specific agents for granular control
+$ aura extension install logo-generator
+→ Installing Logo Generator Extension...
+→ Cost: $3.50 per generation
+✓ Extension ready
 
-### Agent Ecosystem
-- **Onboarding Agent**: Learn about your product and build strategy
-- **Content Creator**: Generate posts, captions, and media
-- **Brand Strategist**: Maintain consistent voice and identity  
-- **Scheduler**: Optimize posting times and cadence
-- **Analytics Agent**: Track performance and suggest improvements
+$ aura agents orchestrate --task="launch_campaign"
+🧠 Orchestrator: Coordinating team...
+→ Content Creator: Preparing assets
+→ Scheduler: Planning distribution
+→ Brand Strategist: Final review
+✓ Campaign launched successfully
 
-## Pricing & Features
+$ aura stats --realtime
+📈 Engagement up 247% this week
+🎯 Reach: 12.4K users
+💬 Comments: 94% positive sentiment
+✓ All systems optimal
+```
 
-### **Free Tier**
-**Perfect for getting started**
-- IDE-inspired design for quick social media strategy development
-- Unlimited manual posts with scheduling
-- Basic agent team for brand and content creation
-- Get in front of prospects faster with specialized AI help
-- Build brand identity with minimal effort
+## Agent Ecosystem
+**Intelligent Agent Architecture**
 
-### **Pro Tier - $5/month + Extensions**
-**Unlock the full agent ecosystem**
-- Access to all available extensions (pay-per-use)
-- **Extensions include**:
-  - Logo Generator
-  - Research Assistant  
-  - Content Scheduler
-  - Campaign Director
-  - Carousel Maker
-  - Slideshow Creator
-  - And more!
+Core Agents: Essential automation workflows (Always Free). Extensions: Specialized AI tools and advanced capabilities (Pay-per-use).
 
-**Extension Pricing**: Based on actual cost + small margin
-- Example: 500-token extension ≈ $0.003 per use
-- Most extensions cost just a few cents per use
-- Transparent pricing based on AI model costs
+### **Core Agents** - FREE
+Essential social media automation agents built into AURA. Always available, no hidden costs.
 
-### **Power User - $20/month**  
-**Everything included, no per-use charges**
-- All extensions unlimited
-- Perfect for heavy users who don't want to track usage
-- Maximum creative freedom
+- **Onboarding Agent** - Learn about your product and build strategy
+- **Content Creator** - Generate posts, captions, and media
+- **Brand Strategist** - Maintain consistent voice and identity
+- **Scheduler Agent** - Optimize posting times and cadence
 
-### **Teams & Enterprise**
-- Custom pricing available
-- Currently in development phase
-- Contact us to discuss corporate use cases
-- Help shape our enterprise roadmap
+### **Extensions** - PAY-PER-USE
+Specialized AI tools and advanced capabilities for power users and professional teams.
 
-## Request Custom Extensions
+#### Professional Extensions
+- **Analytics Agent** - Advanced performance tracking and insights
+- **Logo Generator** - Professional brand identity creation
+- **Research Assistant** - Market research and competitor analysis
+- **Carousel Maker** - Multi-slide social media content
 
-Have an idea for a new agent or tool? **Anyone can recommend an extension** and we'll work to create it! Our platform is designed to grow with your needs.
+#### Extension Categories
+- **AI Workflows** - Multi-step AI processes ($1.50 - $2.25)
+- **Creative Tools** - Instant generation tools ($0.75 - $3.50)
+- **Analytics & Data** - Advanced reporting ($1.25 - $2.00)
 
-## The Experience
+## Fair Pricing Model
+**No Monthly Fees, Pay What You Use**
 
-AURA feels like having a **creative agency at your fingertips**. Whether you're:
-- Launching your first product
-- Growing your personal brand  
-- Managing multiple social accounts
-- Scaling your content strategy
+Build your social media empire without breaking the bank. Core automation agents are completely free, and premium extensions cost only what you actually use — no subscriptions, no commitments.
 
-Our AI agents work together to understand your vision and execute it across all your social channels with professional quality and strategic thinking.
+### **Free** - $0
+Perfect for getting started with social media automation
+- $0/month
+- ✓ Onboarding Agent
+- ✓ Content Creator
+- ✓ Brand Strategist
+- ✓ Basic Scheduling
+- ✓ Manual Posts
 
-## Get Started Today
+### **Pro** - $5/month ⭐ POPULAR
+Everything free + access to extensions ecosystem
+- ✓ All Free Tier features
+- ✓ Analytics Agent
+- ✓ Research Assistant
+- ✓ Logo & Carousel Maker
+- ✓ Pay-per-use Extensions
 
-Ready to transform your social media strategy? 
+### **Power User** - $20/month 🚀 UNLIMITED
+Everything included with unlimited extensions
+- ✓ All Pro Tier features
+- ✓ Unlimited Extensions
+- ✓ Advanced Analytics
+- ✓ Priority Support
+- ✓ No Usage Tracking
 
-1. **Sign up for free** - No credit card required
-2. **Meet your onboarding agent** - Tell us about your goals
-3. **Watch your brand come to life** - AI handles the heavy lifting
-4. **Scale as you grow** - Add extensions when you need them
+### Extension Pricing Examples
+Pro tier extensions use transparent, cost-based pricing:
+- **~$0.003** - 500-token generation
+- **$3.00** - Logo generation
+- **$0.10** - Analytics report
+
+## Democratizing AI Mission
+**AI for Everyone**
+
+Our core mission is making AI accessible to everyone through generous free tiers, affordable pay-per-use pricing, and zero subscription lock-in. Transparent pricing, immediate access, unlimited potential.
+
+- **Generous Free Tier** - Essential workflow agents included at no cost
+- **Affordable Pay-per-use** - Premium extensions priced around ~$1 per generation
+- **Transparent Pricing** - Clear costs displayed before each use, no hidden fees
+
+## Technology with Purpose
+At ACDC Digital, we believe technology should serve a greater purpose beyond mere functionality. Our development philosophy centers on creating solutions that genuinely improve business processes, enhance user experiences, and drive meaningful outcomes.
+
+*"Excellence in digital solutions requires more than technical proficiency—it demands understanding business context, user needs, and the strategic vision that guides successful implementation."*
+
+## Ready to Build with AURA?
+Transform your social media strategy with AI agents that understand your brand, create compelling content, and engage your audience 24/7.
+
+**Start Free Today** | **Meet Your Agents**
+
+```bash
+$ aura --help
+aura: vibe-code your social media strategy with ai agents
+
+commands:
+  agents          manage your ai agent team
+  onboard         set up your brand strategy
+  content         create and schedule posts
+  extensions      browse and install tools
+  stats           view performance analytics
+
+system status:
+  agents: online
+  api: operational
+  extensions: active
+  uptime: 99.9%
+```
 
 ---
 
-## Development Status
+## Development & Contact
 
-### Current Phase: Foundation & Core Agent Development ✅
+### Current Development Status
+**Phase: Foundation & Extension Ecosystem** ✅
 - [x] Agent orchestration system
 - [x] User onboarding flow
-- [x] Basic content creation agents
-- [x] Scheduling and posting automation
-- [x] Free tier functionality
+- [x] Core automation agents
+- [x] Extension marketplace
+- [x] Console-ready interface
 
-### Next Phase: Extension Ecosystem
-- [ ] Logo generator extension
-- [ ] Research assistant integration
-- [ ] Advanced analytics agents
-- [ ] Team collaboration features
-- [ ] Enterprise pilot program
-
-## Legal & Contact
-
-**Proprietary Software** - All rights reserved to ACDC Digital.
-
+### Enterprise & Partnerships
 For licensing, partnerships, or enterprise inquiries:
 - Email: msimon@acdc.digital
+- GitHub: [AURA Platform](https://github.com/acdc-digital/AURA)
+
 ---
+
+**© 2025 ACDC Digital** | *democratizing AI through extensible architecture*
 
 **Ready to vibe-code your way to social media success?**
 
