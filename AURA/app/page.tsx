@@ -19,7 +19,7 @@ export default function HomePage() {
   const { activePanel, setActivePanel } = useSidebarStore();
   const { isCollapsed, setCollapsed } = useTerminalStore();
   const { needsOnboarding } = useOnboarding();
-  const [terminalHeight, setTerminalHeight] = useState(40); // Height as percentage of viewport
+  const [terminalHeight, setTerminalHeight] = useState(55); // Height as percentage of viewport - increased from 40vh to 55vh
   const [isResizing, setIsResizing] = useState(false);
 
   // Auto-expand terminal for onboarding (only once, don't force it to stay open)
@@ -49,7 +49,7 @@ export default function HomePage() {
       moveEvent.preventDefault();
       const deltaY = startY - moveEvent.clientY; // Inverted because we're dragging from top
       const deltaPercentage = (deltaY / viewportHeight) * 100;
-      const newHeight = Math.min(80, Math.max(15, startHeight + deltaPercentage)); // Min 15%, Max 80%
+      const newHeight = Math.min(80, Math.max(25, startHeight + deltaPercentage)); // Min 25%, Max 80% - increased from 15% to 25%
       
       // Update DOM directly for smooth resizing
       if (terminalElement) {
@@ -124,7 +124,6 @@ export default function HomePage() {
               className={`absolute bottom-0 left-[240px] right-0 z-10 ${
                 isCollapsed ? 'h-[35px]' : ''
               }`}
-              // eslint-disable-next-line react/forbid-dom-props
               style={!isCollapsed ? { height: `${terminalHeight}vh`, transition: isResizing ? 'none' : 'height 200ms' } : undefined}
             >
               {/* Resize handle - only show when expanded */}

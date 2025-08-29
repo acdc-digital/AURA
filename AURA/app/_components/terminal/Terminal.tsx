@@ -23,14 +23,14 @@ export default function Terminal() {
     toggleVoiceMode,
   } = useTerminalStore();
   
-  const { terminals, createTerminal } = useTerminal();
+  const { terminals } = useTerminal();
   const { isAuthenticated } = useConvexAuth();
 
   // Track if we're already creating a terminal to prevent duplicates
   const creatingTerminalRef = useRef(false);
 
   // Initialize session sync once at the terminal level
-  useSessionSync();
+  useSessionSync(true);
 
   // Ensure we always have a terminal when authenticated
   useEffect(() => {
@@ -39,15 +39,8 @@ export default function Terminal() {
       if (!activeTerminalId || !terminals.has(activeTerminalId)) {
         // Check if we have any terminals at all
         if (terminals.size === 0) {
-          console.log("Creating initial terminal for authenticated user");
-          creatingTerminalRef.current = true;
-          try {
-            createTerminal(undefined, "Chat");
-            creatingTerminalRef.current = false;
-          } catch (error) {
-            console.error("Failed to create terminal:", error);
-            creatingTerminalRef.current = false;
-          }
+          console.log("No terminals found - session sync will handle creation");
+          // Don't create terminal here - let useSessionSync handle it
         } else {
           // We have terminals but no active one selected, select the first one
           const firstTerminalId = Array.from(terminals.keys())[0];
@@ -57,7 +50,7 @@ export default function Terminal() {
         }
       }
     }
-  }, [isAuthenticated, terminals, createTerminal, activeTerminalId]);  const renderActiveTabContent = () => {
+  }, [isAuthenticated, terminals, activeTerminalId]);  const renderActiveTabContent = () => {
     switch (activeTab) {
       case 'terminal':
         if (!isAuthenticated) {

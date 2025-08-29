@@ -7,11 +7,21 @@ import { useTerminalSessionStore } from "@/lib/store/terminal-sessions";
 import { MessageCircle } from "lucide-react";
 import { SessionManager } from "../sessions";
 import { OrchestratorAgent } from "../../agents/_components/orchestrator";
+import { useUser } from "@/lib/hooks";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 export function ChatDisplay() {
-  const { activeSessionId, getActiveSession } = useTerminalSessionStore();
+  const { activeSessionId } = useTerminalSessionStore();
+  const { user } = useUser();
   
-  const activeSession = getActiveSession();
+  // Get sessions from Convex to find the active session
+  const sessions = useQuery(
+    api.chat.getUserSessions,
+    user?.clerkId ? { userId: user.clerkId } : "skip"
+  );
+  
+  const activeSession = sessions?.find(session => session.sessionId === activeSessionId);
 
   return (
     <div className="flex-1 bg-[#0e0e0e] flex flex-col">

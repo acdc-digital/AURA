@@ -56,17 +56,6 @@ export const TerminalMessage: FC<TerminalMessageProps> = ({
     (message.inputTokens === undefined || message.inputTokens === 0) &&
     (message.outputTokens === undefined || message.outputTokens === 0);
 
-  // Debug logging for interactive components (can be removed in production)
-  if (message.interactiveComponent && process.env.NODE_ENV === 'development') {
-    console.log("🔍 TerminalMessage - Interactive component found:", {
-      type: message.interactiveComponent.type,
-      status: message.interactiveComponent.status,
-      messageId: message._id,
-      isStreaming,
-      shouldRender: !isStreaming && message.interactiveComponent.status === "pending"
-    });
-  }
-
   // Format message for terminal display  
   const formatMessage = (msg: TerminalMessageProps['message']) => {
     switch (msg.role) {
@@ -149,50 +138,23 @@ export const TerminalMessage: FC<TerminalMessageProps> = ({
                   {formatMessage(message)}
                 </TypewriterResponse>
                 
-                {/* Interactive Components - only show for completed messages */}
-                {(() => {
-                  console.log("🔍 Interactive component check:", {
-                    messageId: message._id,
-                    isStreaming,
-                    hasInteractiveComponent: !!message.interactiveComponent,
-                    interactiveComponent: message.interactiveComponent,
-                    type: message.interactiveComponent?.type,
-                    status: message.interactiveComponent?.status
-                  });
-                  return null;
-                })()}
                 {!isStreaming && message.interactiveComponent && message.interactiveComponent.status === "pending" && (
                   <div className="mt-3">
                     {message.interactiveComponent.type === "onboarding_skip_button" && (
-                      <>
-                        {console.log("🎬 Rendering OnboardingSkipButton", {
-                          messageId: message._id,
-                          isStreaming,
-                          status: message.interactiveComponent.status
-                        })}
-                        <OnboardingSkipButton
-                          messageId={message._id}
-                          onSkipped={() => {
-                            console.log("👋 Skip button clicked");
-                          }}
-                        />
-                      </>
+                      <OnboardingSkipButton
+                        messageId={message._id}
+                        onSkipped={() => {
+                          console.log("👋 Skip button clicked");
+                        }}
+                      />
                     )}
                     {message.interactiveComponent?.type === "onboarding_continue_button" && (
-                      <>
-                        {console.log("🎬 Rendering OnboardingContinueButton", {
-                          messageId: message._id,
-                          isStreaming,
-                          status: message.interactiveComponent?.status,
-                          interactiveComponent: message.interactiveComponent
-                        })}
-                        <OnboardingContinueButton
-                          messageId={message._id}
-                          onContinued={() => {
-                            console.log("🎯 Continue button clicked");
-                          }}
-                        />
-                      </>
+                      <OnboardingContinueButton
+                        messageId={message._id}
+                        onContinued={() => {
+                          console.log("🎯 Continue button clicked");
+                        }}
+                      />
                     )}
                   </div>
                 )}

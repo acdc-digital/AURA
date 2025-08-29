@@ -42,17 +42,11 @@ This document provides a comprehensive sample conversation showing the complete 
 
 ### 🤖 Onboarding Agent: Welcome Message
 ```
-Welcome to AURA! 🌟
+Time to grow your Aura.
 
-I'm here to help you get started with your brand and content creation journey. You have a few options:
+Let's get started by creating your brand identity. You can skip the setup and add the details later, or begin by simply letting me know the name of your brand or product.
 
-**Option 1: Quick Setup** - I can guide you through creating your first brand guidelines and project structure (recommended for new users)
-
-**Option 2: Skip & Explore** - Jump right in and start exploring AURA on your own
-
-If you'd like me to help you get started, what's the name of your product or brand? If you don't have one yet, that's perfectly fine - we can work with your name or any project you're excited about!
-
-*You can always skip this onboarding and return to it later from your settings.*
+[Skip] (Interactive Button)
 ```
 
 **Convex Mutation Executed:**

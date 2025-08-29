@@ -37,10 +37,10 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
   const {
     formattedMessages,
     rawMessages,
-    isLoading: isLoadingMessages,
+    isLoading: messagesLoading,
     activeSessionId
   } = useSessionMessages();
-  const { createSessionWithSync } = useSessionSync();
+  const { createSessionWithSync } = useSessionSync(false); // Don't run sync logic here
   const { needsOnboarding, isLoading: onboardingLoading } = useOnboarding();
   
   // Agent and Extension stores for active indicator
@@ -105,6 +105,7 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
   const [hasInitializedOnboarding, setHasInitializedOnboarding] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
+  const welcomeMessageSendingRef = useRef(false);
 
   // Reset onboarding initialization when onboarding status changes
   useEffect(() => {
@@ -441,24 +442,28 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
     }
   }, [isAuthenticated, terminalId]);
 
-  // Auto-enter chat mode if terminal title is "Chat" and handle onboarding initialization
+  // Auto-enter chat mode for onboarding users or if terminal title is "Chat"
   useEffect(() => {
-    if (terminal?.title === "Chat" && !chatMode && isAuthenticated && !onboardingLoading) {
+    const shouldEnterChatMode = (
+      (terminal?.title === "Chat" && !chatMode) ||
+      (needsOnboarding && !chatMode && activeSessionId && !onboardingLoading)
+    ) && isAuthenticated;
+
+    if (shouldEnterChatMode) {
+      console.log('🎯 Entering chat mode:', {
+        terminalTitle: terminal?.title,
+        needsOnboarding,
+        activeSessionId,
+        reason: terminal?.title === "Chat" ? 'terminal title' : 'onboarding'
+      });
+      
       setChatMode(true);
       
-      // Use existing activeSessionId from the session store instead of creating our own
-      if (activeSessionId) {
-        // Session is already available
-      } else if (sessions && sessions.length > 0) {
-        // First session is available - session store will handle management
-      }
-      // If no sessions exist, useSessionSync will create one automatically
-
       // Dynamic welcome message based on onboarding status
       const welcomeMessage = needsOnboarding
-        ? `🌟 AURA Onboarding Active
+        ? `🌟 AURA Onboarding Starting...
 
-Your personalized onboarding assistant is ready below.`
+Loading your personalized onboarding assistant.`
         : `🤖 Welcome to AURA Chat!
       
 Connected to Orchestrator Agent powered by Claude 3.7 Sonnet.
@@ -467,42 +472,35 @@ Ready to help with development tasks, planning, and guidance.
 Type your message below to get started.
 Type 'exit' or 'quit' to return to terminal mode.`;
 
-      // Add welcome message to buffer
+      // Add welcome message to buffer (for onboarding, this is just a status message)
       addToBuffer(welcomeMessage);
     }
-  }, [terminal?.title, chatMode, isAuthenticated, onboardingLoading, needsOnboarding, activeSessionId, sessions, addToBuffer, terminalId]);
+  }, [terminal?.title, chatMode, isAuthenticated, onboardingLoading, needsOnboarding, activeSessionId, sessions, addToBuffer, terminalId, setChatMode]);
 
-  // Handle onboarding welcome message - consolidated logic to prevent duplicates
+  // Handle onboarding welcome message - send to database when conditions are met
   useEffect(() => {
-    if (chatMode && isAuthenticated && !onboardingLoading && needsOnboarding && activeSessionId && !hasInitializedOnboarding) {
+    if (isAuthenticated && !onboardingLoading && needsOnboarding && activeSessionId && !hasInitializedOnboarding && user?._id && !welcomeMessageSendingRef.current) {
+      console.log('🎯 Sending onboarding welcome message to database');
+      
+      // Set flags immediately to prevent race conditions
+      setHasInitializedOnboarding(true);
+      welcomeMessageSendingRef.current = true;
+      
       // Send welcome message to database (only once per session)
       sendOnboardingWelcome({
         sessionId: activeSessionId,
-        userId: user?._id,
-      }).catch(console.error);
-
-      // Mark as initialized to prevent duplicate calls
-      setHasInitializedOnboarding(true);
-
-      // Update welcome message in buffer to show onboarding context
-      const onboardingWelcome = `🌟 Welcome to AURA!
-
-I'm your onboarding assistant, powered by Claude 3.7 Sonnet.
-Let me help you get started and learn about AURA's capabilities.
-
-What would you like to know first? I can explain:
-• How to navigate and use AURA
-• Development tools and workflows
-• Project management features
-• Or answer any questions you have!
-
-Type your question below to get started.`;
-
-      // Clear buffer and add onboarding welcome
-      clearBuffer();
-      addToBuffer(onboardingWelcome);
+        userId: user._id,
+      }).then(() => {
+        console.log('✅ Onboarding welcome message sent successfully');
+        welcomeMessageSendingRef.current = false;
+      }).catch((error) => {
+        console.error('❌ Failed to send onboarding welcome:', error);
+        // Reset flags on error so it can be retried
+        setHasInitializedOnboarding(false);
+        welcomeMessageSendingRef.current = false;
+      });
     }
-  }, [chatMode, isAuthenticated, onboardingLoading, needsOnboarding, activeSessionId, hasInitializedOnboarding, sendOnboardingWelcome, clearBuffer, addToBuffer, terminalId, setHasInitializedOnboarding, user?._id]);
+  }, [isAuthenticated, onboardingLoading, needsOnboarding, activeSessionId, hasInitializedOnboarding, sendOnboardingWelcome, user?._id]);
 
   // Command processor - enhanced with orchestrator chat integration
   const processCommand = useCallback(async (command: string) => {
@@ -743,7 +741,7 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
             {chatMode ? (
               // Show session messages when in chat mode
               <>
-                {isLoadingMessages ? (
+                {messagesLoading ? (
                   <div className="text-[#858585] flex items-center justify-center py-4">
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                     Loading chat history...
@@ -752,30 +750,19 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
                   <>
                     {formattedMessages.length === 0 ? (
                       <div className="text-[#858585] py-4">
-                        {needsOnboarding ? (
-                          <>
-                            🌟 Welcome to AURA!
-                            <br />
-                            <br />
-                            I&apos;m your onboarding assistant, powered by Claude 3.7 Sonnet.
-                            <br />
-                            Let me help you get started and learn about AURA&apos;s capabilities.
-                            <br />
-                            <br />
-                            What would you like to know first? I can explain:
-                            <br />
-                            • How to navigate and use AURA
-                            <br />
-                            • Development tools and workflows
-                            <br />
-                            • Project management features
-                            <br />
-                            • Or answer any questions you have!
-                            <br />
-                            <br />
-                            Type your question below to get started.
-                          </>
+                        {needsOnboarding && !hasInitializedOnboarding ? (
+                          // Show loading state while onboarding welcome is being sent
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            Initializing onboarding assistant...
+                          </div>
+                        ) : needsOnboarding ? (
+                          // If onboarding is initialized but no messages yet, show minimal message
+                          <div className="text-[#858585] py-2">
+                            Onboarding assistant is ready. Your welcome message should appear shortly.
+                          </div>
                         ) : (
+                          // Non-onboarding users get the regular welcome
                           <>
                             🤖 Welcome to AURA Chat!
                             <br />

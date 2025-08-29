@@ -273,12 +273,6 @@ export const handleOnboardingMessage = action({
     progress?: number;
     error?: string;
   }> => {
-    console.log('🔍 handleOnboardingMessage called with:', {
-      message: message.substring(0, 100),
-      sessionId,
-      timestamp: new Date().toISOString()
-    });
-    
     // Get authenticated user identity
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -300,7 +294,6 @@ export const handleOnboardingMessage = action({
     }
     
     const actualUserId = user._id;
-    console.log('✅ Using userId:', actualUserId);
 
     // Get current onboarding state
     const currentState: {
@@ -319,8 +312,6 @@ export const handleOnboardingMessage = action({
     } = await ctx.runQuery(api.onboarding.getOnboardingProgress, {
       userId: actualUserId,
     }) || { currentStep: "welcome", completionPercentage: 0 };
-
-    console.log('📊 Current onboarding state:', currentState);
 
     // Check if onboarding is already completed
     if (currentState.isCompleted || currentState.isSkipped) {
@@ -344,41 +335,10 @@ export const handleOnboardingMessage = action({
     // Analyze user message to extract ALL relevant information (not just current step)
     const extractedInfo = await extractInformationFromMessage(message);
 
-    // Add debugging information to chat for visibility
-    await ctx.runMutation(api.chat.addMessage, {
-      role: "system",
-      content: `[DEBUG] Extraction Results: ${JSON.stringify({
-        message: message.substring(0, 100),
-        currentStep: currentState.currentStep,
-        hasData: extractedInfo.hasData,
-        extractionsCount: extractedInfo.extractions.length,
-        extractions: extractedInfo.extractions.map(e => ({
-          step: e.step,
-          dataType: typeof e.data,
-          dataPreview: JSON.stringify(e.data).substring(0, 50)
-        }))
-      }, null, 2)}`,
-      sessionId,
-      userId: actualUserId,
-    });
-
     // Update onboarding response if we extracted meaningful data
     if (extractedInfo.hasData) {
-      await ctx.runMutation(api.chat.addMessage, {
-        role: "system",
-        content: `[DEBUG] Starting database updates for ${extractedInfo.extractions.length} extractions...`,
-        sessionId,
-        userId: actualUserId,
-      });
-      
       // Update each extracted piece of information
       for (const extraction of extractedInfo.extractions) {
-        await ctx.runMutation(api.chat.addMessage, {
-          role: "system",
-          content: `[DEBUG] Updating step: ${extraction.step} with data: ${JSON.stringify(extraction.data)}`,
-          sessionId,
-          userId: actualUserId,
-        });
         try {
           await ctx.runMutation(api.onboarding.updateOnboardingResponse, {
             userId: actualUserId,
@@ -386,20 +346,9 @@ export const handleOnboardingMessage = action({
             step: extraction.step,
             responseData: extraction.data,
           });
-          
-          await ctx.runMutation(api.chat.addMessage, {
-            role: "system",
-            content: `[DEBUG] ✅ Successfully updated step: ${extraction.step}`,
-            sessionId,
-            userId: actualUserId,
-          });
         } catch (error) {
-          await ctx.runMutation(api.chat.addMessage, {
-            role: "system",
-            content: `[DEBUG] ❌ Error updating step ${extraction.step}: ${error}`,
-            sessionId,
-            userId: actualUserId,
-          });
+          console.error(`Error updating step ${extraction.step}:`, error);
+          // Continue with other extractions even if one fails
         }
       }
 
@@ -417,9 +366,6 @@ export const handleOnboardingMessage = action({
     
     const assistantMessages = sessionMessages.filter(msg => msg.role === "assistant").length;
     const MAX_ONBOARDING_QUESTIONS = 8; // Comprehensive brand identity collection
-    
-    console.log(`🔍 DEBUG: Total messages: ${sessionMessages.length}, Assistant messages: ${assistantMessages}, User messages: ${sessionMessages.filter(msg => msg.role === "user").length}`);
-    console.log(`🔍 DEBUG: Assistant messages content:`, sessionMessages.filter(msg => msg.role === "assistant").map((msg, i) => `${i + 1}: ${msg.content.substring(0, 50)}...`));
     
     // Check for completion signals - expanded list with more common phrases
     const completionPhrases = [
@@ -440,9 +386,8 @@ export const handleOnboardingMessage = action({
     
     console.log(`🔍 Onboarding check: ${assistantMessages} questions asked (max: ${MAX_ONBOARDING_QUESTIONS}), completion signal: ${hasCompletionSignal}, early completion: ${shouldCompleteEarly}, message: "${message}"`);
     
-    // Debug: Check if we should complete
+    // Check if we should complete
     const shouldComplete = assistantMessages >= MAX_ONBOARDING_QUESTIONS || hasCompletionSignal || shouldCompleteEarly;
-    console.log(`🔍 DEBUG: Should complete? ${shouldComplete} (messages: ${assistantMessages} >= ${MAX_ONBOARDING_QUESTIONS} = ${assistantMessages >= MAX_ONBOARDING_QUESTIONS})`);
 
     if (shouldComplete) {
       const completionReason = hasCompletionSignal ? "user_signal" :
@@ -451,7 +396,6 @@ export const handleOnboardingMessage = action({
       console.log(`🎯 Completing onboarding: ${assistantMessages} questions asked (max: ${MAX_ONBOARDING_QUESTIONS}), reason: ${completionReason}`);
       
       try {
-        console.log("📝 Step 1: Updating onboarding response...");
         // Mark onboarding as completion_pending (not fully completed yet)
         await ctx.runMutation(api.onboarding.updateOnboardingResponse, {
           userId: actualUserId,
@@ -459,30 +403,24 @@ export const handleOnboardingMessage = action({
           step: "completion_pending",
           responseData: { completedAt: Date.now(), reason: completionReason },
         });
-        console.log("✅ Step 1 completed");
 
-        console.log("📝 Step 2: Updating user status...");
         // Update user status to completion_pending
         await ctx.runMutation(api.users.updateOnboardingStatus, {
           status: "completion_pending",
         });
-        console.log("✅ Step 2 completed");
 
-        console.log("📝 Step 3: Generating brand guidelines...");
         // Generate brand guidelines action
         try {
           await ctx.runAction(api.onboarding.generateBrandGuidelines, {
             userId: actualUserId,
           });
-          console.log("✅ Step 3 completed - brand guidelines generated");
         } catch (error) {
           console.error("❌ Error in Step 3 (brand guidelines):", error);
           // Continue with completion even if guidelines generation fails
         }
 
-        console.log("📝 Step 4: Sending completion message with continue button...");
         // Send completion message with continue button
-        const completionMessageId = await ctx.runMutation(api.chat.addMessage, {
+        await ctx.runMutation(api.chat.addMessage, {
           role: "assistant",
           content: `Thanks! Your brand identity has been updated. 🎉
 
@@ -500,8 +438,6 @@ Ready to start building with AURA?`,
             status: "pending"
           }
         });
-        console.log("✅ Step 4 completed - message ID:", completionMessageId);
-        console.log("🔘 Continue button should now be visible!");
 
         return {
           success: true,
@@ -544,19 +480,6 @@ Ready to start building with AURA?`,
     }
 
     try {
-      // Add debug logging
-      const lastMessage = messages[messages.length - 1];
-      console.log("🔍 Making Anthropic API call with:", {
-        modelName: "claude-3-7-sonnet-20250219",
-        systemPromptLength: contextualPrompt.length,
-        messageCount: messages.length,
-        lastUserMessage: lastMessage ?
-          typeof lastMessage.content === 'string' ?
-            (lastMessage.content as string).substring(0, 100) :
-            'Complex content'
-          : 'No messages'
-      });
-      
       // Call Anthropic API with enhanced context
       const response = await anthropic.messages.create({
         model: "claude-3-7-sonnet-20250219",
@@ -1324,7 +1247,12 @@ export const sendWelcomeMessage = action({
     });
     
     const hasWelcomeMessage = existingMessages.some(msg =>
-      msg.role === "assistant" && msg.content.includes("Time to grow your Aura")
+      msg.role === "assistant" && (
+        msg.content.includes("Time to grow your Aura") ||
+        msg.content.includes("Let's get started by creating your brand identity") ||
+        msg.content.includes("Welcome to AURA! 🌟") || // Legacy messages
+        msg.content.includes("I'm here to help you get started with your brand")
+      )
     );
     
     if (hasWelcomeMessage) {
@@ -1336,7 +1264,7 @@ export const sendWelcomeMessage = action({
 
 Let's get started by creating your brand identity. You can skip the setup and add the details later, or begin by simply letting me know the name of your brand or product.`;
 
-    // Save the welcome message with interactive skip button
+    // Save the welcome message with skip button
     const messageId = await ctx.runMutation(api.chat.addMessage, {
       role: "assistant",
       content: welcomeMessage,
@@ -1347,15 +1275,16 @@ Let's get started by creating your brand identity. You can skip the setup and ad
       outputTokens: Math.ceil(welcomeMessage.length / 4), // Estimate output tokens
       interactiveComponent: {
         type: "onboarding_skip_button",
-        data: { label: "Skip" },
         status: "pending",
-      },
+        data: { sessionId, userId }
+      }
     });
 
     console.log("✅ Onboarding welcome message created:", {
       messageId,
       sessionId,
-      hasInteractiveComponent: true
+      hasInteractiveComponent: true,
+      componentType: "onboarding_skip_button"
     });
 
     return welcomeMessage;

@@ -11,6 +11,7 @@
     "build": "pnpm --recursive run build",
     "install:all": "pnpm install",
     "clean": "pnpm --parallel --recursive run clean",
+    "cleanup": "cd AURA && node scripts/cleanup-database.js",
     "lint": "pnpm --parallel --recursive run lint",
     "test": "pnpm --parallel --recursive run test"
   },

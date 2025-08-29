@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
 import { useCallback, useRef, useState, useEffect } from "react";
 import { useTerminalStore } from "@/lib/store/terminal";
+import { useUser } from "./useUser";
 
 export interface Terminal {
   id: string;
@@ -30,8 +31,12 @@ export interface TerminalCommand {
  * Follows AURA's state management patterns: Convex for persistence, minimal client state
  */
 export function useTerminal() {
+  const { user } = useUser();
+  
   // Convex queries and mutations - provide empty args for queries that don't require them
-  const sessions = useQuery(api.terminal.getTerminalSessions, {});
+  const sessions = useQuery(api.terminal.getTerminalSessions,
+    user?.clerkId ? { userId: user.clerkId } : "skip"
+  );
   const saveSessionMutation = useMutation(api.terminal.saveTerminalSession);
   const saveCommandMutation = useMutation(api.terminal.saveTerminalCommand);
   const updateStatusMutation = useMutation(api.terminal.updateTerminalStatus);

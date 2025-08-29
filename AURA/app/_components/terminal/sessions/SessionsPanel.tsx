@@ -5,7 +5,8 @@
 
 import { api } from "@/convex/_generated/api";
 import { useTerminalSessionStore } from "@/lib/store/terminal-sessions";
-import { useUser, useSessionSync } from "@/lib/hooks";
+import { useTerminalStore } from "@/lib/store/terminal";
+import { useUser, useSessionSync, useOnboarding } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { MessageSquare, Plus, Trash2, Edit3, Calendar } from "lucide-react";
@@ -21,7 +22,8 @@ interface SessionsPanelProps {
 export function SessionsPanel({ className, onSessionSelected }: SessionsPanelProps) {
   const { isAuthenticated } = useConvexAuth();
   const { user } = useUser();
-  const { createSessionWithSync } = useSessionSync();
+  const { createSessionWithSync } = useSessionSync(false); // Don't run sync logic here
+  const { needsOnboarding } = useOnboarding();
   
   // Get sessions from Convex
   const sessions = useQuery(
@@ -40,7 +42,7 @@ export function SessionsPanel({ className, onSessionSelected }: SessionsPanelPro
   const updateSessionMutation = useMutation(api.chat.updateSession);
 
   const handleCreateSession = async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || needsOnboarding) return;
     
     try {
       await createSessionWithSync("New Chat Session");
@@ -51,8 +53,28 @@ export function SessionsPanel({ className, onSessionSelected }: SessionsPanelPro
   };
 
   const handleDeleteSession = async (sessionId: string) => {
-    if (!sessions || sessions.length <= 1) {
-      return; // Don't delete the last session
+    if (!sessions) return;
+
+    // Calculate filtered sessions
+    const filteredSessions = sessions.filter((session) => {
+      if (needsOnboarding) {
+        return session.title?.toLowerCase().includes('onboarding') ||
+               session.title?.toLowerCase().includes('welcome');
+      }
+      return true;
+    });
+
+    if (filteredSessions.length <= 1) {
+      return; // Don't delete the last visible session
+    }
+
+    // During onboarding, don't allow deleting the onboarding session
+    if (needsOnboarding) {
+      const session = sessions.find(s => s.sessionId === sessionId);
+      if (session?.title?.toLowerCase().includes('onboarding') ||
+          session?.title?.toLowerCase().includes('welcome')) {
+        return; // Don't delete onboarding session during onboarding
+      }
     }
     
     try {
@@ -63,6 +85,10 @@ export function SessionsPanel({ className, onSessionSelected }: SessionsPanelPro
         const otherSession = sessions.find(s => s.sessionId !== sessionId);
         if (otherSession) {
           setActiveSession(otherSession.sessionId);
+          
+          // Also update terminal store to keep them in sync
+          const terminalStore = useTerminalStore.getState();
+          terminalStore.setActiveTerminal(otherSession.sessionId);
         }
       }
     } catch (error) {
@@ -71,7 +97,13 @@ export function SessionsPanel({ className, onSessionSelected }: SessionsPanelPro
   };
 
   const handleSwitchSession = (sessionId: string) => {
+    // Update both chat session and terminal session stores
     setActiveSession(sessionId);
+    
+    // Also update terminal store to keep them in sync
+    const terminalStore = useTerminalStore.getState();
+    terminalStore.setActiveTerminal(sessionId);
+    
     onSessionSelected?.(); // Switch to chat tab
   };
 
@@ -114,13 +146,21 @@ export function SessionsPanel({ className, onSessionSelected }: SessionsPanelPro
       <div className="flex items-center justify-between p-3 border-b border-[#2d2d30]">
         <div className="text-xs text-white flex items-center">
           <MessageSquare className="w-3 h-3 mr-2" />
-          Chat Sessions ({sessions?.length || 0})
+          Chat Sessions ({sessions?.filter((session) => {
+            // During onboarding, only count onboarding-related sessions
+            if (needsOnboarding) {
+              return session.title?.toLowerCase().includes('onboarding') ||
+                     session.title?.toLowerCase().includes('welcome');
+            }
+            return true;
+          }).length || 0})
         </div>
         <Button
           onClick={handleCreateSession}
           variant="ghost"
           size="sm"
           className="h-6 px-2 text-xs text-[#858585] hover:text-[#cccccc] hover:bg-[#2d2d2d]"
+          disabled={needsOnboarding}
         >
           <Plus className="w-3 h-3 mr-1" />
           New
@@ -129,18 +169,30 @@ export function SessionsPanel({ className, onSessionSelected }: SessionsPanelPro
 
       {/* Sessions List */}
       <div className="flex-1 overflow-y-auto p-2">
-        {!sessions || sessions.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-xs text-[#858585] text-center">
-              <MessageSquare className="w-6 h-6 mx-auto mb-2 opacity-50" />
-              No chat sessions yet
+        {(() => {
+          // Apply filtering logic
+          const filteredSessions = sessions?.filter((session) => {
+            // During onboarding, only show onboarding-related sessions
+            if (needsOnboarding) {
+              return session.title?.toLowerCase().includes('onboarding') ||
+                     session.title?.toLowerCase().includes('welcome');
+            }
+            // After onboarding, show all sessions
+            return true;
+          }) || [];
+
+          return !filteredSessions || filteredSessions.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-xs text-[#858585] text-center">
+                <MessageSquare className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                {needsOnboarding ? "Initializing onboarding session..." : "No chat sessions yet"}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {sessions
-              .sort((a, b) => b.lastActivity - a.lastActivity)
-              .map((session) => (
+          ) : (
+            <div className="space-y-1">
+              {filteredSessions
+                .sort((a, b) => b.lastActivity - a.lastActivity)
+                .map((session) => (
                 <div
                   key={session.sessionId}
                   className={`group relative p-2 rounded cursor-pointer transition-colors ${
@@ -188,7 +240,7 @@ export function SessionsPanel({ className, onSessionSelected }: SessionsPanelPro
 
                     {/* Action buttons */}
                     <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {sessions.length > 1 && (
+                      {filteredSessions.length > 1 && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -222,15 +274,26 @@ export function SessionsPanel({ className, onSessionSelected }: SessionsPanelPro
                   )}
                 </div>
               ))}
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Footer */}
       <div className="p-2 border-t border-[#2d2d30]">
         <div className="text-xs text-[#858585] flex items-center justify-between">
           <span>
-            Active: {sessions?.find((s) => s.sessionId === activeSessionId)?.title || 'None'}
+            Active: {(() => {
+              const filteredSessions = sessions?.filter((session) => {
+                if (needsOnboarding) {
+                  return session.title?.toLowerCase().includes('onboarding') ||
+                         session.title?.toLowerCase().includes('welcome');
+                }
+                return true;
+              }) || [];
+              const activeSession = filteredSessions.find((s) => s.sessionId === activeSessionId);
+              return activeSession?.title || 'None';
+            })()}
           </span>
         </div>
       </div>
