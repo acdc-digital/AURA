@@ -3,9 +3,8 @@
 
 "use client";
 
-import { useUser, useOnboarding, useTerminal } from "@/lib/hooks";
+import { useOnboarding, useTerminal, useTerminalSession, useTerminalHistory, useUser } from "@/lib/hooks";
 import { useTerminalStore } from "@/lib/store/terminal";
-import { useTerminalSessionStore } from "@/lib/store/terminal-sessions";
 import { useSessionMessages } from "@/lib/hooks/useSessionMessages";
 import { useSessionSync } from "@/lib/hooks/useSessionSync";
 import { useSessionTokens } from "@/lib/hooks/useSessionTokens";
@@ -13,13 +12,15 @@ import { getTokenUsageColor } from "@/lib/utils/tokens";
 import { EnhancedPromptInput } from "../../chat";
 import { TerminalMessage } from "../chat/_components/TerminalMessage";
 import { api } from "@/convex/_generated/api";
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { useAction } from "convex/react";
 import { Loader2, Plus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SessionsPanel } from "../sessions/SessionsPanel";
 import { AgentsPanel } from "../agents/AgentsPanel";
 import { ExtensionsPanel } from "../extensions/ExtensionsPanel";
+import { useExtensionStore } from "@/lib/extensions/store";
+import { useAgentStore } from "@/lib/agents/store";
 
 interface AdvancedTerminalDisplayProps {
   terminalId: string;
@@ -27,10 +28,12 @@ interface AdvancedTerminalDisplayProps {
 
 export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayProps) {
   const { isAuthenticated } = useConvexAuth();
-  const { saveCommand } = useTerminal();
   const sendMessage = useAction(api.orchestrator.sendMessage);
+  const sendOnboardingMessage = useAction(api.onboarding.handleOnboardingMessage);
   const sendOnboardingWelcome = useAction(api.onboarding.sendWelcomeMessage);
-  const { sessions } = useTerminalSessionStore();
+  const { user } = useUser();
+  const sessions = useQuery(api.chat.getUserSessions, user?.clerkId ? { userId: user.clerkId } : "skip");
+  
   const {
     formattedMessages,
     rawMessages,
@@ -40,48 +43,105 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
   const { createSessionWithSync } = useSessionSync();
   const { needsOnboarding, isLoading: onboardingLoading } = useOnboarding();
   
+  // Agent and Extension stores for active indicator
+  const { selectedExtensionId, getExtensionById } = useExtensionStore();
+  const { selectedAgentId } = useAgentStore();
+  
+  // Helper function to determine currently active agent/extension
+  const getActiveAgentInfo = useCallback(() => {
+    // Priority order: Onboarding > Selected Extension > Selected Agent > Orchestrator
+    if (needsOnboarding && !onboardingLoading) {
+      return { name: "Onboarding", type: "agent" };
+    }
+    
+    if (selectedExtensionId) {
+      const extension = getExtensionById(selectedExtensionId);
+      return {
+        name: extension?.name || extension?.id || "Extension",
+        type: "extension"
+      };
+    }
+    
+    if (selectedAgentId) {
+      // You can enhance this by getting agent display name from registry
+      return {
+        name: selectedAgentId.charAt(0).toUpperCase() + selectedAgentId.slice(1),
+        type: "agent"
+      };
+    }
+    
+    return { name: "Orchestrator", type: "agent" };
+  }, [needsOnboarding, onboardingLoading, selectedExtensionId, selectedAgentId, getExtensionById]);
+  
   // Token tracking for active session
   const { totalTokens, formatTokenCount, getUsageStatus } = useSessionTokens(activeSessionId);
   
+  // Get terminals and terminal management functions
+  const { terminals, saveCommand } = useTerminal();
+  
+  // Get terminal session with buffer management
   const {
-    terminals,
-    commandHistory,
+    session: terminalSession,
     addToBuffer,
     clearBuffer,
+  } = useTerminalSession(terminalId);
+  
+  // Get command history
+  const { commands: commandHistory } = useTerminalHistory(terminalId);
+  
+  // Get UI state from store
+  const {
+    isVoiceMode,
     setProcessing,
-    addToHistory,
+    isProcessing,
   } = useTerminalStore();
   
-  const terminal = terminals.get(terminalId);
+  const terminal = terminals.get(terminalId) || terminalSession;
   
   // Input state
   const [input, setInput] = useState("");
   const [chatMode, setChatMode] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'chat' | 'sessions' | 'agents' | 'extensions'>('chat');
+  const [hasInitializedOnboarding, setHasInitializedOnboarding] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
+
+  // Reset onboarding initialization when onboarding status changes
+  useEffect(() => {
+    if (!needsOnboarding && hasInitializedOnboarding) {
+      console.log("🔄 Onboarding completed/skipped, resetting initialization state");
+      setHasInitializedOnboarding(false);
+    }
+  }, [needsOnboarding, hasInitializedOnboarding]);
   
   // Handler for regenerating the last assistant message
   const handleRegenerate = useCallback(async () => {
     if (!isAuthenticated || !activeSessionId) return;
     
     try {
-      await sendMessage({
-        message: "Please regenerate your last response with a different approach or additional details.",
-        sessionId: activeSessionId,
-      });
+      // Use onboarding handler if user needs onboarding, otherwise use orchestrator
+      if (needsOnboarding) {
+        await sendOnboardingMessage({
+          message: "Please regenerate your last response with a different approach or additional details.",
+          sessionId: activeSessionId,
+        });
+      } else {
+        await sendMessage({
+          message: "Please regenerate your last response with a different approach or additional details.",
+          sessionId: activeSessionId,
+        });
+      }
     } catch (error) {
       console.error('Failed to regenerate message:', error);
     }
-  }, [isAuthenticated, activeSessionId, sendMessage]);
+  }, [isAuthenticated, activeSessionId, needsOnboarding, sendMessage, sendOnboardingMessage]);
 
   // Handler for creating new session
   const handleCreateNewSession = async () => {
     if (!isAuthenticated) return;
     
     try {
-      await createSessionWithSync(); // This will auto-generate title and sync with Convex
+      await createSessionWithSync("New Chat Session"); // This will auto-generate title and sync with Convex
       setActiveSubTab('chat'); // Switch to chat tab automatically
     } catch (error) {
       console.error('Failed to create new session:', error);
@@ -381,34 +441,16 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
     }
   }, [isAuthenticated, terminalId]);
 
-  // Auto-enter chat mode if terminal title is "Chat"
+  // Auto-enter chat mode if terminal title is "Chat" and handle onboarding initialization
   useEffect(() => {
     if (terminal?.title === "Chat" && !chatMode && isAuthenticated && !onboardingLoading) {
       setChatMode(true);
       
       // Use existing activeSessionId from the session store instead of creating our own
       if (activeSessionId) {
-        setSessionId(activeSessionId);
-        
-        // If this is onboarding, send welcome message to database
-        if (needsOnboarding) {
-          sendOnboardingWelcome({
-            sessionId: activeSessionId,
-            userId: undefined, // Will be inferred from auth
-          }).catch(console.error);
-        }
-      } else if (sessions.length > 0) {
-        // Use first available session if no active one
-        const firstSessionId = sessions[0].sessionId;
-        setSessionId(firstSessionId);
-        
-        // If this is onboarding, send welcome message to database
-        if (needsOnboarding) {
-          sendOnboardingWelcome({
-            sessionId: firstSessionId,
-            userId: undefined, // Will be inferred from auth
-          }).catch(console.error);
-        }
+        // Session is already available
+      } else if (sessions && sessions.length > 0) {
+        // First session is available - session store will handle management
       }
       // If no sessions exist, useSessionSync will create one automatically
 
@@ -426,19 +468,21 @@ Type your message below to get started.
 Type 'exit' or 'quit' to return to terminal mode.`;
 
       // Add welcome message to buffer
-      addToBuffer(terminalId, welcomeMessage);
+      addToBuffer(welcomeMessage);
     }
-  }, [terminal?.title, chatMode, isAuthenticated, onboardingLoading, needsOnboarding, activeSessionId, sessions, addToBuffer, terminalId, sendOnboardingWelcome]);
+  }, [terminal?.title, chatMode, isAuthenticated, onboardingLoading, needsOnboarding, activeSessionId, sessions, addToBuffer, terminalId]);
 
-  // Enforce onboarding consistency across session switches
+  // Handle onboarding welcome message - consolidated logic to prevent duplicates
   useEffect(() => {
-    if (chatMode && isAuthenticated && !onboardingLoading && needsOnboarding && activeSessionId) {
-      // If user needs onboarding and we're in chat mode, ensure welcome message is sent
-      // This ensures onboarding is enforced even when switching sessions
+    if (chatMode && isAuthenticated && !onboardingLoading && needsOnboarding && activeSessionId && !hasInitializedOnboarding) {
+      // Send welcome message to database (only once per session)
       sendOnboardingWelcome({
         sessionId: activeSessionId,
-        userId: undefined,
+        userId: user?._id,
       }).catch(console.error);
+
+      // Mark as initialized to prevent duplicate calls
+      setHasInitializedOnboarding(true);
 
       // Update welcome message in buffer to show onboarding context
       const onboardingWelcome = `🌟 Welcome to AURA!
@@ -455,10 +499,10 @@ What would you like to know first? I can explain:
 Type your question below to get started.`;
 
       // Clear buffer and add onboarding welcome
-      clearBuffer(terminalId);
-      addToBuffer(terminalId, onboardingWelcome);
+      clearBuffer();
+      addToBuffer(onboardingWelcome);
     }
-  }, [chatMode, isAuthenticated, onboardingLoading, needsOnboarding, activeSessionId, sendOnboardingWelcome, clearBuffer, addToBuffer, terminalId]);
+  }, [chatMode, isAuthenticated, onboardingLoading, needsOnboarding, activeSessionId, hasInitializedOnboarding, sendOnboardingWelcome, clearBuffer, addToBuffer, terminalId, setHasInitializedOnboarding, user?._id]);
 
   // Command processor - enhanced with orchestrator chat integration
   const processCommand = useCallback(async (command: string) => {
@@ -467,31 +511,37 @@ Type your question below to get started.`;
     const startTime = Date.now();
     
     try {
-      setProcessing(terminalId, true);
+      setProcessing(true);
       
       // Handle chat mode
       if (chatMode) {
         if (command.toLowerCase() === "exit" || command.toLowerCase() === "quit") {
           setChatMode(false);
-          setSessionId(null);
-          addToBuffer(terminalId, "Exited chat mode. Back to terminal.");
+          addToBuffer("Exited chat mode. Back to terminal.");
           return;
         }
         
-        // Send message to orchestrator - it will handle saving both user and assistant messages
+        // Send message to appropriate handler based on onboarding status
         try {
           // Use the active session ID from the session store
           const currentSessionId = activeSessionId || `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          if (!activeSessionId) {
-            setSessionId(currentSessionId);
+          
+          // Route to onboarding handler if user needs onboarding, otherwise to orchestrator
+          if (needsOnboarding) {
+            console.log("📨 Routing message to onboarding handler");
+            await sendOnboardingMessage({
+              message: command,
+              sessionId: currentSessionId,
+            });
+          } else {
+            console.log("📨 Routing message to orchestrator");
+            await sendMessage({
+              message: command,
+              sessionId: currentSessionId,
+            });
           }
           
-          await sendMessage({
-            message: command,
-            sessionId: currentSessionId,
-          });
-          
-          // Messages are already saved by the orchestrator action
+          // Messages are already saved by the handler action
           // Just ensure scroll to bottom after response
           setTimeout(() => {
             if (outputRef.current) {
@@ -500,7 +550,7 @@ Type your question below to get started.`;
           }, 50);
           
         } catch (error) {
-          addToBuffer(terminalId, `❌ Chat error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          addToBuffer(`❌ Chat error: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
         
         return;
@@ -508,13 +558,13 @@ Type your question below to get started.`;
       
       // Add command to buffer with appropriate prompt (only for terminal mode)
       const prompt = `${terminal.currentDirectory} $`;
-      addToBuffer(terminalId, `${prompt} ${command}`);
+      addToBuffer(`${prompt} ${command}`);
       let output = "";
       let exitCode = 0;
       
       // Built-in commands
       if (command === "clear") {
-        clearBuffer(terminalId);
+        clearBuffer();
         return;
       } else if (command === "chat" || command === "orchestrator") {
         setChatMode(true);
@@ -534,11 +584,11 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
   whoami   - Show current user
   date     - Show current date/time`;
       } else if (command === "pwd") {
-        output = terminal.currentDirectory;
+        output = terminal?.currentDirectory || "~";
       } else if (command === "ls") {
         output = "file1.txt  file2.js  project/  README.md";
       } else if (command === "history") {
-        output = commandHistory.slice(-10).map((cmd, i) => `${commandHistory.length - 10 + i + 1}  ${cmd}`).join("\n");
+        output = (commandHistory || []).slice(-10).map((cmd, i: number) => `${(commandHistory?.length || 0) - 10 + i + 1}  ${cmd.input || cmd}`).join("\n");
       } else if (command === "whoami") {
         output = isAuthenticated ? "authenticated-user" : "anonymous";
       } else if (command === "date") {
@@ -559,12 +609,17 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
       
       // Add output to buffer
       if (output) {
-        addToBuffer(terminalId, output);
+        addToBuffer(output);
       }
       
       // Save command to history and Convex
       const duration = Date.now() - startTime;
-      addToHistory(command);
+      // Save command to history
+      await saveCommand(terminalId, {
+        input: command,
+        output: output,
+        timestamp: Date.now(),
+      });
       
       if (isAuthenticated) {
         await saveCommand(terminalId, {
@@ -579,11 +634,11 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
       
     } catch (error) {
       console.error("Command processing error:", error);
-      addToBuffer(terminalId, `Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      addToBuffer(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setProcessing(terminalId, false);
+      setProcessing(false);
     }
-  }, [terminal, terminalId, commandHistory, addToBuffer, clearBuffer, setProcessing, addToHistory, saveCommand, isAuthenticated, chatMode, sendMessage, setChatMode, setSessionId, activeSessionId]);
+  }, [terminal, terminalId, commandHistory, addToBuffer, clearBuffer, setProcessing, saveCommand, isAuthenticated, chatMode, sendMessage, sendOnboardingMessage, needsOnboarding, setChatMode, activeSessionId]);
 
   // Enhanced input submit handler
   const handleEnhancedSubmit = useCallback(async (messageContent: string) => {
@@ -613,7 +668,7 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
   return (
     <div className="flex-1 bg-[#0e0e0e] flex flex-col h-full overflow-hidden">
       {/* Secondary header row with sub-tabs */}
-      <div className="flex items-center px-3 py-1 border-b border-[#1f1f1f] flex-shrink-0 bg-[#181818]">
+      <div className="flex items-center justify-between px-3 py-1 border-b border-[#1f1f1f] flex-shrink-0 bg-[#181818]">
         <div className="flex items-center space-x-1">
           <button
             className={`text-xs px-2 py-1 transition-colors ${
@@ -633,7 +688,7 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
             }`}
             onClick={() => setActiveSubTab('sessions')}
           >
-            Sessions <span className="text-[#4ade80]">{sessions.length}</span>
+            Sessions <span className="text-[#4ade80]">{sessions?.length || 0}</span>
           </button>
           <button
             className={`text-xs px-2 py-1 transition-colors ${
@@ -665,6 +720,16 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
             <Plus className="w-3 h-3" />
           </button>
         </div>
+
+        {/* Active Agent/Extension Indicator */}
+        {activeSubTab === 'chat' && (
+          <div className="flex items-center space-x-2">
+            <div className="text-xs text-[#858585]">
+              <span className="text-[#cccccc]">{getActiveAgentInfo().name}</span>
+              <span className="text-[#4ade80] ml-1">●</span>
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Content Area - conditionally render based on active sub-tab */}
@@ -755,14 +820,14 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
                 onChange={setInput}
                 onSubmit={handleEnhancedSubmit}
                 placeholder={chatMode ? "Ask anything... (Shift+Enter for new line)" : "Type a command... (Shift+Enter for new line)"}
-                disabled={terminal.isProcessing}
-                isLoading={terminal.isProcessing}
+                disabled={isProcessing}
+                isLoading={isProcessing}
                 showToolbar={false}
                 multiline={true}
                 className="border-none bg-transparent"
               />
             </div>
-            {terminal.isProcessing && (
+            {isProcessing && (
               <Loader2 className="w-3 h-3 text-[#0ea5e9] animate-spin flex-shrink-0" />
             )}
           </div>
@@ -777,7 +842,9 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
               </span>
             </div>
             <div className="flex items-center space-x-2">
-              {chatMode ? (
+              {isVoiceMode ? (
+                <span className="text-[#22c55e]">Voice Mode</span>
+              ) : chatMode ? (
                 <span className="text-[#0ea5e9]">Chat Mode</span>
               ) : (
                 <>

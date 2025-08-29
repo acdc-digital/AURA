@@ -260,8 +260,8 @@ class StateAuditor {
   private validateStore(content: string, storeName: string): string[] {
     const issues: string[] = [];
     
-    // Check if store uses create from zustand
-    if (!content.includes('create(')) {
+    // Check if store uses create from zustand (support both create() and create<Type>()())
+    if (!content.includes('create(') && !content.includes('create<')) {
       issues.push('Does not use zustand create pattern');
     }
     
@@ -271,12 +271,24 @@ class StateAuditor {
     }
     
     // Check for business data (should be in Convex, not Zustand)
-    const businessDataPatterns = ['users', 'projects', 'files', 'posts', 'data'];
+    const businessDataPatterns = ['users', 'projects', 'files', 'posts'];
+    // Exclude specific UI-related patterns that contain "data" but are UI state
+    const uiDataPatterns = ['thinkingData', 'formData', 'modalData', 'dragData', 'resizeData', 'editorData'];
+    
     businessDataPatterns.forEach(pattern => {
       if (content.includes(pattern) && !storeName.includes('ui') && !storeName.includes('editor') && !storeName.includes('sidebar')) {
         issues.push(`May contain business data (${pattern}) - should use Convex instead`);
       }
     });
+    
+    // Check for generic "data" but exclude UI-related data patterns
+    if (content.includes('data') && !storeName.includes('ui') && !storeName.includes('editor') && !storeName.includes('sidebar')) {
+      const hasUIDataPattern = uiDataPatterns.some(pattern => content.includes(pattern));
+      if (!hasUIDataPattern) {
+        issues.push(`May contain business data (data) - should use Convex instead`);
+      }
+    }
+    
     
     return issues;
   }
@@ -289,8 +301,8 @@ class StateAuditor {
       issues.push('Uses useQuery but missing proper API import');
     }
     
-    // Check if hook has proper error handling
-    if ((content.includes('useQuery') || content.includes('useMutation')) && !content.includes('try') && !content.includes('catch')) {
+    // Check if hook has proper error handling (only needed for mutations or async operations)
+    if (content.includes('useMutation') && !content.includes('try') && !content.includes('catch')) {
       issues.push('Missing error handling for Convex operations');
     }
     

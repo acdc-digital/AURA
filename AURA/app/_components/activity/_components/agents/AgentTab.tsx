@@ -48,10 +48,16 @@ export default function AgentTab() {
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
 
   const allAgents = agentRegistry.getAllAgents();
+  
+  // Filter to core agents only (Instructions and CMO agents)
+  const coreAgents = allAgents.filter(agent =>
+    agent.id === 'instructions' || agent.id === 'cmo'
+  );
+  
   const activeAgentsList = Array.from(activeAgents);
 
   // Filter agents based on search
-  const filteredAgents = allAgents.filter(agent =>
+  const filteredAgents = coreAgents.filter(agent =>
     agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     agent.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
     agent.tools.some(tool => 
@@ -99,7 +105,7 @@ export default function AgentTab() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <Bot className="w-6 h-6 text-[#4ec9b0]" />
-            <h1 className="text-xl font-semibold text-[#cccccc]">AI Agents</h1>
+            <h1 className="text-xl font-semibold text-[#cccccc]">Core AI Agents</h1>
             {activeAgentsList.length > 0 && (
               <Badge className="bg-[#4ec9b0] text-[#1e1e1e] text-sm px-3">
                 {activeAgentsList.length} Active
@@ -107,13 +113,21 @@ export default function AgentTab() {
             )}
           </div>
           <div className="text-sm text-[#858585]">
-            {allAgents.length} agents • {allAgents.reduce((count, agent) => count + agent.tools.length, 0)} tools
+            {coreAgents.length} core agents • {coreAgents.reduce((count, agent) => count + agent.tools.length, 0)} tools
           </div>
         </div>
         
         <p className="text-[#858585] mb-4">
-          Activate AI agents to access their specialized tools in the terminal. Each agent provides unique capabilities for automating workflows and content creation.
+          Core AI agents for essential workflows. Activate agents to access their specialized tools in the terminal.
         </p>
+
+        {/* Core Agents Info */}
+        <div className="mb-4 p-3 bg-[#252526] rounded-lg border border-[#2d2d2d]">
+          <div className="flex items-center gap-2 text-[#4ec9b0] text-sm">
+            <div className="w-2 h-2 bg-[#4ec9b0] rounded-full animate-pulse"></div>
+            <span>Currently showing core agents - more agents will be added as they&apos;re implemented</span>
+          </div>
+        </div>
 
         {/* Search */}
         <div className="relative">
@@ -287,20 +301,6 @@ export default function AgentTab() {
             </p>
           </div>
         )}
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-[#454545] p-4 bg-[#1a1a1a]">
-        <div className="flex items-center justify-between text-sm">
-          <div className="text-[#858585]">
-            💡 <strong>Tip:</strong> Type <code className="bg-[#2d2d2d] px-1.5 py-0.5 rounded font-mono">/</code> in terminal to access active agent tools
-          </div>
-          <div className="flex items-center gap-4 text-[#858585]">
-            <span>{allAgents.length} agents available</span>
-            <span>•</span>
-            <span>{agentRegistry.getAllCommands().length} total tools</span>
-          </div>
-        </div>
       </div>
     </div>
   );

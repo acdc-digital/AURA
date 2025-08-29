@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as chat from "../chat.js";
+import type * as cleanup from "../cleanup.js";
 import type * as files from "../files.js";
 import type * as identityGuidelines from "../identityGuidelines.js";
 import type * as onboarding from "../onboarding.js";
@@ -36,6 +37,7 @@ import type * as users from "../users.js";
  */
 declare const fullApi: ApiFromModules<{
   chat: typeof chat;
+  cleanup: typeof cleanup;
   files: typeof files;
   identityGuidelines: typeof identityGuidelines;
   onboarding: typeof onboarding;

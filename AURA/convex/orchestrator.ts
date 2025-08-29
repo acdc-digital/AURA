@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import { action, mutation, query } from "./_generated/server";
 import { api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
+import { ConvexError } from "convex/values";
 import Anthropic from "@anthropic-ai/sdk";
 import { ORCHESTRATOR_SYSTEM_PROMPT } from "./prompts";
 
@@ -19,49 +20,24 @@ export const getConversationHistory = query({
     sessionId: v.string(),
   },
   handler: async (ctx, { sessionId }) => {
-    const messages = await ctx.db
-      .query("chatMessages")
-      .filter((q) => q.eq(q.field("sessionId"), sessionId))
-      .order("asc")
-      .take(50); // Increased for better context
+    try {
+      if (!sessionId || typeof sessionId !== 'string') {
+        throw new ConvexError("Invalid session ID provided");
+      }
 
-    return messages;
-  },
-});
+      const messages = await ctx.db
+        .query("chatMessages")
+        .filter((q) => q.eq(q.field("sessionId"), sessionId))
+        .order("asc")
+        .take(50); // Increased for better context
 
-// Helper mutation to save a chat message
-export const saveChatMessage = mutation({
-  args: {
-    role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system"), v.literal("terminal"), v.literal("thinking")),
-    content: v.string(),
-    sessionId: v.string(),
-    userId: v.optional(v.string()),
-    tokenCount: v.optional(v.number()),
-    inputTokens: v.optional(v.number()),
-    outputTokens: v.optional(v.number()),
-    estimatedCost: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.insert("chatMessages", {
-      ...args,
-      createdAt: Date.now(),
-    });
-  },
-});
-
-// Helper mutation to update an existing chat message
-export const updateChatMessage = mutation({
-  args: {
-    messageId: v.id("chatMessages"),
-    content: v.optional(v.string()),
-    tokenCount: v.optional(v.number()),
-    inputTokens: v.optional(v.number()),
-    outputTokens: v.optional(v.number()),
-    estimatedCost: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const { messageId, ...updates } = args;
-    return await ctx.db.patch(messageId, updates);
+      return messages;
+    } catch (error) {
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+      throw new ConvexError("Failed to retrieve conversation history");
+    }
   },
 });
 
@@ -74,17 +50,31 @@ export const saveThinkingMessage = mutation({
     thinkingData: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("chatMessages", {
-      role: "thinking",
-      content: args.content,
-      sessionId: args.sessionId,
-      userId: args.userId,
-      createdAt: Date.now(),
-      operation: args.thinkingData ? {
-        type: "tool_executed",
-        details: args.thinkingData,
-      } : undefined,
-    });
+    try {
+      if (!args.content || typeof args.content !== 'string') {
+        throw new ConvexError("Message content is required");
+      }
+      if (!args.sessionId || typeof args.sessionId !== 'string') {
+        throw new ConvexError("Session ID is required");
+      }
+
+      return await ctx.db.insert("chatMessages", {
+        role: "thinking",
+        content: args.content,
+        sessionId: args.sessionId,
+        userId: args.userId,
+        createdAt: Date.now(),
+        operation: args.thinkingData ? {
+          type: "tool_executed",
+          details: args.thinkingData,
+        } : undefined,
+      });
+    } catch (error) {
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+      throw new ConvexError("Failed to save thinking message");
+    }
   },
 });
 
@@ -96,13 +86,33 @@ export const updateThinkingMessage = mutation({
     thinkingData: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.patch(args.messageId, {
-      content: args.content,
-      operation: args.thinkingData ? {
-        type: "tool_executed",
-        details: args.thinkingData,
-      } : undefined,
-    });
+    try {
+      if (!args.messageId) {
+        throw new ConvexError("Message ID is required");
+      }
+      if (!args.content || typeof args.content !== 'string') {
+        throw new ConvexError("Message content is required");
+      }
+
+      // Verify the message exists
+      const existingMessage = await ctx.db.get(args.messageId);
+      if (!existingMessage) {
+        throw new ConvexError("Message not found");
+      }
+
+      return await ctx.db.patch(args.messageId, {
+        content: args.content,
+        operation: args.thinkingData ? {
+          type: "tool_executed",
+          details: args.thinkingData,
+        } : undefined,
+      });
+    } catch (error) {
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+      throw new ConvexError("Failed to update thinking message");
+    }
   },
 });
 
@@ -251,30 +261,8 @@ export const sendMessage = action({
     estimatedCost: number;
   }> => {
     try {
-      // Check if user needs onboarding first
-      const needsOnboarding = await ctx.runQuery(api.users.needsOnboarding);
-      
-      // If user needs onboarding, redirect to onboarding agent
-      if (needsOnboarding) {
-        const onboardingResponse = await ctx.runAction(api.onboarding.handleOnboardingMessage, {
-          message,
-          sessionId,
-          userId,
-        });
-        
-        if (onboardingResponse.success) {
-          return {
-            success: true,
-            response: onboardingResponse.response || "Onboarding message processed",
-            tokenCount: 0,
-            inputTokens: 0,
-            outputTokens: 0,
-            estimatedCost: 0,
-          };
-        }
-        
-        // If onboarding failed, fall back to regular orchestrator
-      }
+      // REMOVED: Onboarding check - now handled at frontend routing level
+      // The frontend routes messages to onboarding handler when needsOnboarding is true
 
       // Continue with regular orchestrator logic
       // Get conversation history for context
@@ -283,7 +271,7 @@ export const sendMessage = action({
       });
 
       // Save user message to database first
-      await ctx.runMutation(api.orchestrator.saveChatMessage, {
+      await ctx.runMutation(api.chat.addMessage, {
         role: "user",
         content: message,
         sessionId,
@@ -367,21 +355,20 @@ export const sendMessage = action({
             
             if (!responseMessageId) {
               // Always create initial response message
-              responseMessageId = await ctx.runMutation(api.orchestrator.saveChatMessage, {
+              responseMessageId = await ctx.runMutation(api.chat.addMessage, {
                 role: "assistant",
                 content: responseContent,
                 sessionId,
                 userId,
-                tokenCount: 0, // Will be updated at the end
+                tokenCount: Math.ceil(responseContent.length / 4), // Rough token count
                 inputTokens: 0,
-                outputTokens: 0,
-                estimatedCost: 0,
+                outputTokens: Math.ceil(responseContent.length / 4),
               });
               lastResponseUpdate = now;
             } else if (shouldUpdate) {
               // Update existing response message with throttled streaming content
-              await ctx.runMutation(api.orchestrator.updateChatMessage, {
-                messageId: responseMessageId,
+              await ctx.runMutation(api.chat.updateMessage, {
+                id: responseMessageId,
                 content: responseContent,
               });
               lastResponseUpdate = now;
@@ -422,27 +409,22 @@ export const sendMessage = action({
         estimatedCost,
       });
 
-      // Update final assistant response with token info (if response message was created)
+      // Update final assistant response (if response message was created)
       if (responseMessageId) {
-        await ctx.runMutation(api.orchestrator.updateChatMessage, {
-          messageId: responseMessageId,
+        await ctx.runMutation(api.chat.updateMessage, {
+          id: responseMessageId,
           content: responseContent, // Ensure final content is saved
-          tokenCount: totalTokens,
-          inputTokens,
-          outputTokens,
-          estimatedCost,
         });
       } else if (responseContent) {
         // Fallback: save response if no streaming occurred
-        await ctx.runMutation(api.orchestrator.saveChatMessage, {
+        await ctx.runMutation(api.chat.addMessage, {
           role: "assistant",
           content: responseContent,
           sessionId,
           userId,
-          tokenCount: totalTokens,
-          inputTokens,
-          outputTokens,
-          estimatedCost,
+          tokenCount: Math.ceil(responseContent.length / 4), // Rough token count
+          inputTokens: 0,
+          outputTokens: Math.ceil(responseContent.length / 4),
         });
       }
 
@@ -457,22 +439,25 @@ export const sendMessage = action({
     } catch (error) {
       console.error("Error in sendMessage:", error);
       
-      // Save error message
-      await ctx.runMutation(api.orchestrator.saveChatMessage, {
-        role: "assistant",
-        content: "I apologize, but I encountered an error processing your request. Please try again.",
-        sessionId,
-        userId,
-      });
+      try {
+        // Save error message
+        await ctx.runMutation(api.chat.addMessage, {
+          role: "assistant",
+          content: "I apologize, but I encountered an error processing your request. Please try again.",
+          sessionId,
+          userId,
+          tokenCount: 20, // Rough token count for error message
+          inputTokens: 0,
+          outputTokens: 20,
+        });
+      } catch (saveError) {
+        console.error("Failed to save error message:", saveError);
+      }
 
-      return {
-        success: false,
-        response: "Error processing request",
-        tokenCount: 0,
-        inputTokens: 0,
-        outputTokens: 0,
-        estimatedCost: 0,
-      };
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+      throw new ConvexError("Failed to process message");
     }
   },
 });
@@ -484,7 +469,13 @@ export const sendWelcomeMessage = action({
     userId: v.optional(v.string()),
   },
   handler: async (ctx, { sessionId, userId }) => {
-    const welcomeMessage = `Welcome to AURA! 🌟
+    console.log("🎯 Orchestrator sendWelcomeMessage called with:", { sessionId, userId });
+    try {
+      if (!sessionId || typeof sessionId !== 'string') {
+        throw new ConvexError("Session ID is required");
+      }
+
+      const welcomeMessage = `Welcome to AURA! 🌟
 
 I'm your orchestrator agent, ready to help you build, create, and grow your projects. Since you've chosen to skip the onboarding, you can dive right in and explore at your own pace.
 
@@ -496,24 +487,90 @@ Here's what I can help you with:
 
 What would you like to work on today?`;
 
-    // Save the welcome message
-    const messageId = await ctx.runMutation(api.orchestrator.saveChatMessage, {
-      role: "assistant",
-      content: welcomeMessage,
-      sessionId,
-      userId,
-      tokenCount: welcomeMessage.length,
-      inputTokens: 0,
-      outputTokens: Math.ceil(welcomeMessage.length / 4),
-    });
+      console.log("💬 Saving orchestrator welcome message...");
+      // Save the welcome message
+      const messageId = await ctx.runMutation(api.chat.addMessage, {
+        role: "assistant",
+        content: welcomeMessage,
+        sessionId,
+        userId,
+        tokenCount: Math.ceil(welcomeMessage.length / 4), // Rough token count
+        inputTokens: 0,
+        outputTokens: Math.ceil(welcomeMessage.length / 4),
+      });
 
-    console.log("🎯 Orchestrator welcome message sent:", {
-      messageId,
-      sessionId,
-      userId
-    });
+      console.log("🎯 Orchestrator welcome message sent:", {
+        messageId,
+        sessionId,
+        userId
+      });
 
-    return welcomeMessage;
+      return welcomeMessage;
+    } catch (error) {
+      console.error("❌ Failed to send orchestrator welcome message:", error);
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+      throw new ConvexError("Failed to send welcome message");
+    }
+  },
+});
+
+// Action to send orchestrator welcome message after onboarding completion
+export const sendOnboardingCompleteWelcomeMessage = action({
+  args: {
+    sessionId: v.string(),
+    userId: v.optional(v.string()),
+  },
+  handler: async (ctx, { sessionId, userId }) => {
+    try {
+      if (!sessionId || typeof sessionId !== 'string') {
+        throw new ConvexError("Session ID is required");
+      }
+
+      const welcomeMessage = `Welcome to AURA! 🌟
+
+Congratulations on completing your brand identity setup! Your comprehensive brand guidelines are now ready, and I'm here as your orchestrator agent to help you bring your vision to life.
+
+Here's what we can work on together:
+• **Project Development**: Build your AI developer platform
+• **Brand Content**: Create marketing materials with your new brand identity
+• **Technical Architecture**: Design scalable systems and solutions
+• **Content Strategy**: Plan and execute your brand's digital presence
+
+With your brand guidelines in place, we're ready to build something amazing. What would you like to tackle first?`;
+
+      // Mark onboarding as fully completed now
+      if (userId) {
+        await ctx.runMutation(api.users.updateOnboardingStatus, {
+          status: "completed",
+        });
+      }
+
+      // Save the welcome message
+      const messageId = await ctx.runMutation(api.chat.addMessage, {
+        role: "assistant",
+        content: welcomeMessage,
+        sessionId,
+        userId,
+        tokenCount: Math.ceil(welcomeMessage.length / 4), // Rough token count
+        inputTokens: 0,
+        outputTokens: Math.ceil(welcomeMessage.length / 4),
+      });
+
+      console.log("🎯 Orchestrator onboarding complete welcome message sent:", {
+        messageId,
+        sessionId,
+        userId
+      });
+
+      return welcomeMessage;
+    } catch (error) {
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+      throw new ConvexError("Failed to send onboarding complete welcome message");
+    }
   },
 });
 
@@ -523,15 +580,26 @@ export const getSessionInfo = query({
     sessionId: v.string(),
   },
   handler: async (ctx, { sessionId }) => {
-    const messages = await ctx.db
-      .query("chatMessages")
-      .filter((q) => q.eq(q.field("sessionId"), sessionId))
-      .collect();
+    try {
+      if (!sessionId || typeof sessionId !== 'string') {
+        throw new ConvexError("Invalid session ID provided");
+      }
 
-    return {
-      sessionId,
-      messageCount: messages.length,
-      lastActivity: messages.length > 0 ? Math.max(...messages.map(m => m.createdAt)) : Date.now(),
-    };
+      const messages = await ctx.db
+        .query("chatMessages")
+        .filter((q) => q.eq(q.field("sessionId"), sessionId))
+        .collect();
+
+      return {
+        sessionId,
+        messageCount: messages.length,
+        lastActivity: messages.length > 0 ? Math.max(...messages.map(m => m.createdAt)) : Date.now(),
+      };
+    } catch (error) {
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+      throw new ConvexError("Failed to retrieve session info");
+    }
   },
 });

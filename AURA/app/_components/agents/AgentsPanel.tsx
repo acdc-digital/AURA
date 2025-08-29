@@ -25,6 +25,9 @@ export function AgentsPanel() {
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
 
   const allAgents = agentRegistry.getAllAgents();
+  // Filter to core agents only (Instructions and CMO agents)
+  const coreAgentIds = ['instructions', 'cmo'];
+  const coreAgents = allAgents.filter(agent => coreAgentIds.includes(agent.id));
   const activeAgentsList = Array.from(activeAgents);
   const recentExecutions = executionHistory.slice(0, 5);
 
@@ -74,7 +77,15 @@ export function AgentsPanel() {
       {/* Agent List */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-3">
-          {allAgents.map((agent) => {
+          <div className="mb-3">
+            <h3 className="text-[#cccccc] text-sm font-medium flex items-center justify-between">
+              <span>Core Agents</span>
+              <span className="text-[#858585] text-xs">
+                Showing {coreAgents.length} of {allAgents.length} agents
+              </span>
+            </h3>
+          </div>
+          {coreAgents.map((agent) => {
             const isActive = isAgentActive(agent.id);
             const isSelected = selectedAgentId === agent.id;
             const isExpanded = expandedAgent === agent.id;
@@ -218,18 +229,6 @@ export function AgentsPanel() {
           </div>
         </div>
       )}
-
-      {/* Status Footer */}
-      <div className="border-t border-[#454545] p-3 bg-[#1e1e1e]/50">
-        <div className="text-xs text-[#858585] space-y-1">
-          <div>💡 <strong>Tip:</strong> Type <code className="bg-[#2d2d2d] px-1 rounded">/</code> in terminal for tool menu</div>
-          <div className="flex items-center gap-4">
-            <span>{allAgents.length} agents available</span>
-            <span>•</span>
-            <span>{agentRegistry.getAllCommands().length} tools</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -46,19 +46,26 @@ export function useSessionMessages() {
     });
   }, [messages]);
   
-  // Function to add a user message
+  // Function to add a user message with error handling
   const addUserMessage = async (content: string) => {
-    if (!activeSessionId || !isAuthenticated) return;
-    
-    await addMessage({
-      role: "user",
-      content,
-      sessionId: activeSessionId,
-      userId: undefined, // Will be set by auth context in Convex
-    });
+    try {
+      if (!activeSessionId || !isAuthenticated) {
+        throw new Error('Session ID and authentication required');
+      }
+      
+      await addMessage({
+        role: "user",
+        content,
+        sessionId: activeSessionId,
+        userId: undefined, // Will be set by auth context in Convex
+      });
+    } catch (error) {
+      console.error('Failed to add user message:', error);
+      throw new Error(`Unable to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
   
-  // Function to add assistant response
+  // Function to add assistant response with error handling
   const addAssistantMessage = async (
     content: string, 
     tokenData?: {
@@ -68,15 +75,22 @@ export function useSessionMessages() {
       estimatedCost?: number;
     }
   ) => {
-    if (!activeSessionId || !isAuthenticated) return;
-    
-    await addMessage({
-      role: "assistant",
-      content,
-      sessionId: activeSessionId,
-      userId: undefined,
-      ...tokenData,
-    });
+    try {
+      if (!activeSessionId || !isAuthenticated) {
+        throw new Error('Session ID and authentication required');
+      }
+      
+      await addMessage({
+        role: "assistant",
+        content,
+        sessionId: activeSessionId,
+        userId: undefined,
+        ...tokenData,
+      });
+    } catch (error) {
+      console.error('Failed to add assistant message:', error);
+      throw new Error(`Unable to send assistant message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
   
   return {

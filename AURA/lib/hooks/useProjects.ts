@@ -82,27 +82,47 @@ export function useProjects(): UseProjectsReturn {
     return projects.filter(project => project.status === status);
   }, [projects]);
 
-  // Actions
+  // Actions with proper error handling
   const createProject = useCallback(async (data: CreateProjectData): Promise<Id<"projects">> => {
-    return await createProjectMutation({
-      ...data,
-      status: data.status || "active",
-    });
+    try {
+      return await createProjectMutation({
+        ...data,
+        status: data.status || "active",
+      });
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      throw new Error(`Unable to create project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [createProjectMutation]);
 
   const updateProject = useCallback(async (projectId: Id<"projects">, data: UpdateProjectData): Promise<void> => {
-    await updateProjectMutation({
-      id: projectId,
-      ...data,
-    });
+    try {
+      await updateProjectMutation({
+        id: projectId,
+        ...data,
+      });
+    } catch (error) {
+      console.error('Failed to update project:', error);
+      throw new Error(`Unable to update project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [updateProjectMutation]);
 
   const deleteProject = useCallback(async (projectId: Id<"projects">): Promise<void> => {
-    await deleteProjectMutation({ id: projectId });
+    try {
+      await deleteProjectMutation({ id: projectId });
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      throw new Error(`Unable to delete project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [deleteProjectMutation]);
 
   const duplicateProject = useCallback(async (projectId: Id<"projects">): Promise<Id<"projects">> => {
-    return await duplicateProjectMutation({ id: projectId });
+    try {
+      return await duplicateProjectMutation({ id: projectId });
+    } catch (error) {
+      console.error('Failed to duplicate project:', error);
+      throw new Error(`Unable to duplicate project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [duplicateProjectMutation]);
 
   return {

@@ -4,10 +4,17 @@
 "use client";
 
 import { api } from "@/convex/_generated/api";
-import { useTerminalSessionStore, ChatSession } from "@/lib/store/terminal-sessions";
+import { useTerminalSessionStore } from "@/lib/store/terminal-sessions";
 import { useConvexAuth, useQuery, useMutation } from "convex/react";
 import { useUser } from "./useUser";
 import { useCallback, useEffect, useRef } from "react";
+
+interface SessionUpdate {
+  title?: string;
+  isActive?: boolean;
+  lastActivity?: number;
+  preview?: string;
+}
 
 export function useSessionSync() {
   const { isAuthenticated } = useConvexAuth();
@@ -27,91 +34,60 @@ export function useSessionSync() {
   const updateSessionMutation = useMutation(api.chat.updateSession);
   const deleteSessionMutation = useMutation(api.chat.deleteSession);
   
-  // Function to create session in both local store and Convex
-  const createSessionWithSync = useCallback(async (title?: string) => {
-    if (!isAuthenticated || !userId) return null;
-    
-    const sessionId = crypto.randomUUID();
-    
-    // Auto-generate intuitive title
-    const now = new Date();
-    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const defaultTitle = `Chat ${timeString}`;
-    const finalTitle = title || defaultTitle;
-    
-    // Create session in Convex first
-    const convexId = await createSessionMutation({
-      sessionId,
-      title: finalTitle,
-      userId,
-    });
-    
-    // Create local session with Convex ID
-    const newSession: ChatSession = {
-      sessionId,
-      title: finalTitle,
-      isActive: true,
-      totalTokens: 0,
-      totalCost: 0,
-      messageCount: 0,
-      createdAt: Date.now(),
-      lastActivity: Date.now(),
-      preview: '',
-      userId,
-      convexId,
-    };
-    
-    // Update local store
-    const store = useTerminalSessionStore.getState();
-    store.setSessions([...store.sessions, newSession]);
-    store.setActiveSession(sessionId);
-    
-    return sessionId;
+  // Create session with sync to Convex
+  const createSessionWithSync = useCallback(async (title: string) => {
+    if (!isAuthenticated || !userId) {
+      return;
+    }
+
+    try {
+      const sessionId = crypto.randomUUID();
+      await createSessionMutation({
+        sessionId,
+        title,
+        userId,
+      });
+      
+      // Set as active session
+      const store = useTerminalSessionStore.getState();
+      store.setActiveSession(sessionId);
+      
+      return sessionId;
+    } catch (error) {
+      console.error('Failed to create session:', error);
+      throw error;
+    }
   }, [isAuthenticated, userId, createSessionMutation]);
   
   // Sync Convex sessions to local store - only once per data change
   useEffect(() => {
-    if (convexSessions && isAuthenticated && userId) {
-      const syncedSessions: ChatSession[] = convexSessions.map(session => ({
-        sessionId: session.sessionId,
-        title: session.title || 'Untitled Session',
-        isActive: session.isActive,
-        totalTokens: session.totalTokens,
-        totalCost: session.totalCost,
-        messageCount: session.messageCount,
-        createdAt: session.createdAt,
-        lastActivity: session.lastActivity,
-        preview: session.preview || '',
-        userId: session.userId || undefined,
-      }));
-      
-      const store = useTerminalSessionStore.getState();
-      
-      // Only sync if we haven't already synced or if the data changed
-      const currentSessionIds = store.sessions.map(s => s.sessionId).sort().join(',');
-      const newSessionIds = syncedSessions.map(s => s.sessionId).sort().join(',');
-      
-      if (currentSessionIds !== newSessionIds || !syncedRef.current) {
-        store.loadSessions(syncedSessions);
-        
-        // Set active session if none exists
-        if (!store.activeSessionId && syncedSessions.length > 0) {
-          store.setActiveSession(syncedSessions[0].sessionId);
-        }
-        
-        syncedRef.current = true;
-        
-        // If no sessions exist after sync, create initial session
-        if (syncedSessions.length === 0 && store.sessions.length === 0) {
-          console.log('📝 No sessions found, creating initial session...');
-          createSessionWithSync('Terminal Chat').catch(console.error);
-        }
-      }
+    if (!convexSessions || !isAuthenticated || !userId) {
+      return;
+    }
+
+    const store = useTerminalSessionStore.getState();
+    
+    // If no sessions exist, create a default one
+    // REMOVED: Auto-creation now handled by Terminal component to prevent duplicates
+    // if (convexSessions.length === 0 && !syncedRef.current) {
+    //   console.log('📝 No sessions found, creating initial session...');
+    //   createSessionWithSync('Terminal Chat').catch(console.error);
+    //   syncedRef.current = true;
+    //   return;
+    // }
+    
+    // Set active session if none exists but we have sessions
+    if (convexSessions.length > 0 && !store.activeSessionId) {
+      const latestSession = convexSessions.reduce((latest, current) =>
+        current.lastActivity > latest.lastActivity ? current : latest
+      );
+      store.setActiveSession(latestSession.sessionId);
+      syncedRef.current = true;
     }
   }, [convexSessions, isAuthenticated, userId, createSessionWithSync]);
   
   // Sync session to Convex
-  const syncSessionToConvex = useCallback(async (sessionId: string, updates: Partial<ChatSession>) => {
+  const syncSessionToConvex = useCallback(async (sessionId: string, updates: SessionUpdate) => {
     if (isAuthenticated) {
       try {
         await updateSessionMutation({

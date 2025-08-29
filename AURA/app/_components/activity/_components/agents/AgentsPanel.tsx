@@ -48,10 +48,20 @@ export default function AgentsPanel({ className = "" }: AgentsPanelProps) {
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
 
   const allAgents = agentRegistry.getAllAgents();
+  
+  // Filter to core agents for now - Instructions (free) and CMO (premium) as examples
+  const coreAgents = allAgents.filter(agent =>
+    agent.id === 'instructions' || agent.id === 'cmo'
+  );
+
+  // Debug logging
+  console.log('Activity AgentsPanel - All agents:', allAgents.map(a => a.id));
+  console.log('Activity AgentsPanel - Core agents:', coreAgents.map(a => a.id));
+
   const activeAgentsList = Array.from(activeAgents);
 
   // Filter agents based on search
-  const filteredAgents = allAgents.filter(agent =>
+  const filteredAgents = coreAgents.filter(agent =>
     agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     agent.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
     agent.tools.some(tool => 
@@ -61,8 +71,8 @@ export default function AgentsPanel({ className = "" }: AgentsPanelProps) {
     )
   );
 
-  // Get all tools count
-  const allToolsCount = allAgents.reduce((count, agent) => count + agent.tools.length, 0);
+  // Get all tools count from core agents
+  const allToolsCount = coreAgents.reduce((count, agent) => count + agent.tools.length, 0);
 
   const toggleAgentExpansion = (agentId: string) => {
     setExpandedAgents(prev => {
@@ -86,12 +96,20 @@ export default function AgentsPanel({ className = "" }: AgentsPanelProps) {
       <div className="p-2 pb-12 overflow-y-auto flex-1">
         {/* Header */}
         <div className="flex items-center justify-between text-xs uppercase text-[#858585] px-2 py-1">
-          <span>Agents & Tools</span>
+          <span>Core Agents</span>
           <div className="flex items-center gap-1">
             {activeAgentsList.length > 0 && (
               <div className="w-2 h-2 bg-[#4ec9b0] rounded-full"></div>
             )}
             <span className="text-[#666]">{allToolsCount}</span>
+          </div>
+        </div>
+
+        {/* Info Banner */}
+        <div className="mx-2 mb-2 p-2 bg-[#2d2d2d]/50 rounded text-[9px] text-[#858585] border border-[#454545]/50">
+          <div className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 bg-[#4ec9b0] rounded-full animate-pulse flex-shrink-0"></div>
+            <span>Showing core agents - more coming as they&apos;re implemented</span>
           </div>
         </div>
 

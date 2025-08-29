@@ -60,6 +60,7 @@ export default defineSchema({
           v.literal("multi_file_selector"),
           v.literal("url_input"),
           v.literal("onboarding_skip_button"),
+          v.literal("onboarding_continue_button"),
         ),
         data: v.optional(v.any()),
         status: v.union(
@@ -207,6 +208,7 @@ export default defineSchema({
     onboardingStatus: v.optional(v.union(
       v.literal("not_started"),
       v.literal("in_progress"),
+      v.literal("completion_pending"),
       v.literal("completed"),
       v.literal("skipped")
     )),
@@ -795,4 +797,88 @@ export default defineSchema({
     .index("by_user", ["userId", "updatedAt"])
     .index("by_status", ["status", "updatedAt"])
     .index("by_user_status", ["userId", "status", "updatedAt"]),
+
+  // Onboarding workflow responses table
+  onboardingResponses: defineTable({
+    userId: v.union(v.string(), v.id("users")),
+    sessionId: v.string(),
+    
+    // Current workflow state
+    currentStep: v.union(
+      v.literal("welcome"),
+      v.literal("brand_name"),
+      v.literal("brand_description"),
+      v.literal("brand_industry"),
+      v.literal("target_audience"),
+      v.literal("brand_personality"),
+      v.literal("brand_values"),
+      v.literal("brand_goals"),
+      v.literal("color_preferences"),
+      v.literal("style_preferences"),
+      v.literal("completion_pending"),
+      v.literal("completed"),
+      v.literal("skipped")
+    ),
+    
+    // User responses to onboarding questions
+    responses: v.object({
+      // Basic brand information
+      brandName: v.optional(v.string()),
+      brandDescription: v.optional(v.string()),
+      brandIndustry: v.optional(v.string()),
+      
+      // Target audience information
+      targetAudience: v.optional(v.object({
+        demographics: v.optional(v.string()),
+        psychographics: v.optional(v.string()),
+        primaryAudience: v.optional(v.string()),
+        secondaryAudience: v.optional(v.string()),
+      })),
+      
+      // Brand identity elements
+      brandPersonality: v.optional(v.array(v.string())), // Array of personality traits
+      brandValues: v.optional(v.array(v.string())), // Array of core values
+      brandGoals: v.optional(v.object({
+        shortTerm: v.optional(v.string()),
+        longTerm: v.optional(v.string()),
+        keyObjectives: v.optional(v.array(v.string())),
+      })),
+      
+      // Visual preferences
+      colorPreferences: v.optional(v.object({
+        preferredColors: v.optional(v.array(v.string())),
+        colorMood: v.optional(v.string()), // warm, cool, neutral, vibrant, etc.
+        avoidColors: v.optional(v.array(v.string())),
+      })),
+      
+      stylePreferences: v.optional(v.object({
+        visualStyle: v.optional(v.string()), // modern, classic, playful, professional, etc.
+        typographyStyle: v.optional(v.string()), // serif, sans-serif, script, etc.
+        imageStyle: v.optional(v.string()), // photography, illustration, mixed, etc.
+      })),
+      
+      // Additional context
+      existingBrand: v.optional(v.boolean()), // Whether they have existing brand materials
+      competitorReferences: v.optional(v.array(v.string())), // Competitor brands they like/dislike
+      additionalNotes: v.optional(v.string()), // Free-form additional information
+    }),
+    
+    // Workflow metadata
+    completionPercentage: v.number(), // 0-100 based on completed steps
+    isCompleted: v.boolean(),
+    isSkipped: v.boolean(),
+    
+    // Generated brand guidelines reference (if completed)
+    generatedGuidelinesId: v.optional(v.id("identityGuidelines")),
+    generatedProjectId: v.optional(v.id("projects")),
+    
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    completedAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId", "updatedAt"])
+    .index("by_session", ["sessionId", "updatedAt"])
+    .index("by_user_status", ["userId", "isCompleted", "updatedAt"])
+    .index("by_completion", ["completionPercentage", "updatedAt"]),
 });

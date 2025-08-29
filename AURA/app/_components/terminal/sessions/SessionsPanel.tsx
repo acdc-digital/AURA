@@ -5,8 +5,9 @@
 
 import { api } from "@/convex/_generated/api";
 import { useTerminalSessionStore } from "@/lib/store/terminal-sessions";
+import { useUser, useSessionSync } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
-import { useConvexAuth, useMutation } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { MessageSquare, Plus, Trash2, Edit3, Calendar } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -19,73 +20,90 @@ interface SessionsPanelProps {
 
 export function SessionsPanel({ className, onSessionSelected }: SessionsPanelProps) {
   const { isAuthenticated } = useConvexAuth();
-  const {
-    sessions,
-    activeSessionId,
-    createSession,
-    switchSession,
-    deleteSession,
-    renameSession,
-  } = useTerminalSessionStore();
+  const { user } = useUser();
+  const { createSessionWithSync } = useSessionSync();
+  
+  // Get sessions from Convex
+  const sessions = useQuery(
+    api.chat.getUserSessions,
+    user?.clerkId ? { userId: user.clerkId } : "skip"
+  );
+  
+  // Get UI state from store
+  const { activeSessionId, setActiveSession } = useTerminalSessionStore();
   
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   
-  // Mutation for deleting sessions
+  // Mutations for managing sessions
   const deleteSessionMutation = useMutation(api.chat.deleteSession);
+  const updateSessionMutation = useMutation(api.chat.updateSession);
 
   const handleCreateSession = async () => {
     if (!isAuthenticated) return;
     
-    await createSession(); // Auto-generate title, no input needed
-    onSessionSelected?.(); // Switch to chat tab
+    try {
+      await createSessionWithSync("New Chat Session");
+      onSessionSelected?.(); // Switch to chat tab
+    } catch (error) {
+      console.error("Failed to create session:", error);
+    }
   };
 
   const handleDeleteSession = async (sessionId: string) => {
-    if (sessions.length <= 1) {
+    if (!sessions || sessions.length <= 1) {
       return; // Don't delete the last session
     }
     
     try {
       await deleteSessionMutation({ sessionId });
-      deleteSession(sessionId);
+      
+      // If this was the active session, switch to another one
+      if (sessionId === activeSessionId && sessions.length > 1) {
+        const otherSession = sessions.find(s => s.sessionId !== sessionId);
+        if (otherSession) {
+          setActiveSession(otherSession.sessionId);
+        }
+      }
     } catch (error) {
-      console.error('Failed to delete session:', error);
+      console.error("Failed to delete session:", error);
     }
   };
 
-  const handleSessionClick = (sessionId: string) => {
-    switchSession(sessionId);
-    onSessionSelected?.(); // Switch to chat tab when session is selected
+  const handleSwitchSession = (sessionId: string) => {
+    setActiveSession(sessionId);
+    onSessionSelected?.(); // Switch to chat tab
   };
 
-  const handleRenameSession = (sessionId: string, newTitle: string) => {
-    if (newTitle.trim() && newTitle !== sessions.find(s => s.sessionId === sessionId)?.title) {
-      renameSession(sessionId, newTitle.trim());
+  const handleRenameSession = async (sessionId: string, newTitle: string) => {
+    if (newTitle.trim() && sessions && newTitle !== sessions.find(s => s.sessionId === sessionId)?.title) {
+      try {
+        await updateSessionMutation({
+          sessionId,
+          updates: { title: newTitle.trim() }
+        });
+      } catch (error) {
+        console.error("Failed to rename session:", error);
+      }
     }
     setEditingSessionId(null);
     setEditTitle('');
   };
 
-  const formatTime = (timestamp: number) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
+  const startEditing = (sessionId: string, currentTitle: string) => {
+    setEditingSessionId(sessionId);
+    setEditTitle(currentTitle || '');
+  };
 
-    if (diffMins < 1) return 'now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+  const cancelEditing = () => {
+    setEditingSessionId(null);
+    setEditTitle('');
   };
 
   if (!isAuthenticated) {
     return (
       <div className={cn("flex-1 bg-[#0e0e0e] flex items-center justify-center", className)}>
-        <div className="text-xs text-[#858585]">Please sign in to manage sessions</div>
+        <div className="text-xs text-[#858585]">Please sign in to view sessions</div>
       </div>
     );
   }
@@ -96,7 +114,7 @@ export function SessionsPanel({ className, onSessionSelected }: SessionsPanelPro
       <div className="flex items-center justify-between p-3 border-b border-[#2d2d30]">
         <div className="text-xs text-white flex items-center">
           <MessageSquare className="w-3 h-3 mr-2" />
-          Chat Sessions ({sessions.length})
+          Chat Sessions ({sessions?.length || 0})
         </div>
         <Button
           onClick={handleCreateSession}
@@ -110,122 +128,111 @@ export function SessionsPanel({ className, onSessionSelected }: SessionsPanelPro
       </div>
 
       {/* Sessions List */}
-      <div className="flex-1 overflow-y-auto">
-        {sessions.length === 0 ? (
-          <div className="p-4 text-center">
-            <div className="text-xs text-[#858585]">No sessions yet</div>
-            <Button
-              onClick={handleCreateSession}
-              variant="ghost"
-              size="sm"
-              className="mt-2 text-xs text-[#0ea5e9] hover:text-white"
-            >
-              Create your first session
-            </Button>
+      <div className="flex-1 overflow-y-auto p-2">
+        {!sessions || sessions.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-xs text-[#858585] text-center">
+              <MessageSquare className="w-6 h-6 mx-auto mb-2 opacity-50" />
+              No chat sessions yet
+            </div>
           </div>
         ) : (
-          <div className="p-2">
+          <div className="space-y-1">
             {sessions
               .sort((a, b) => b.lastActivity - a.lastActivity)
               .map((session) => (
                 <div
                   key={session.sessionId}
-                  className={cn(
-                    "group p-3 rounded border cursor-pointer transition-colors mb-2",
+                  className={`group relative p-2 rounded cursor-pointer transition-colors ${
                     session.sessionId === activeSessionId
-                      ? "bg-[#1e1e1e] border-[#007acc] text-[#cccccc]"
-                      : "bg-[#161616] border-[#2d2d30] hover:bg-[#1a1a1a] hover:border-[#454545] text-[#858585] hover:text-[#cccccc]"
-                  )}
-                  onClick={() => handleSessionClick(session.sessionId)}
+                      ? 'bg-[#0e639c] text-white'
+                      : 'bg-[#1e1e1e] hover:bg-[#2d2d30] text-[#cccccc]'
+                  }`}
+                  onClick={() => handleSwitchSession(session.sessionId)}
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
                       {editingSessionId === session.sessionId ? (
                         <Input
                           value={editTitle}
                           onChange={(e) => setEditTitle(e.target.value)}
+                          onBlur={() => handleRenameSession(session.sessionId, editTitle)}
                           onKeyDown={(e) => {
-                            e.stopPropagation();
                             if (e.key === 'Enter') {
                               handleRenameSession(session.sessionId, editTitle);
                             } else if (e.key === 'Escape') {
-                              setEditingSessionId(null);
-                              setEditTitle('');
+                              cancelEditing();
                             }
                           }}
-                          onBlur={() => handleRenameSession(session.sessionId, editTitle)}
-                          className="bg-transparent border-none text-sm font-medium p-0 h-auto focus-visible:ring-0"
+                          className="h-6 text-xs bg-[#1e1e1e] border-[#2d2d30] text-white"
                           autoFocus
                           onClick={(e) => e.stopPropagation()}
                         />
                       ) : (
-                        <div className="text-sm font-medium truncate pr-2">
-                          {session.title}
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-2 mt-1 text-xs opacity-75">
-                        <span className="flex items-center">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {formatTime(session.lastActivity)}
-                        </span>
-                        {session.messageCount > 0 && (
-                          <span>{session.messageCount} messages</span>
-                        )}
-                        {session.totalTokens > 0 && (
-                          <span>{session.totalTokens.toLocaleString()} tokens</span>
-                        )}
-                      </div>
-                      
-                      {session.preview && (
-                        <div className="text-xs opacity-60 mt-1 truncate">
-                          {session.preview}
+                        <div>
+                          <div className="text-xs font-medium truncate">
+                            {session.title || 'Untitled Session'}
+                          </div>
+                          <div className="text-xs opacity-70 flex items-center mt-1">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {new Date(session.lastActivity).toLocaleDateString()}
+                            {session.messageCount > 0 && (
+                              <span className="ml-2">
+                                {session.messageCount} messages
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
-                    
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingSessionId(session.sessionId);
-                          setEditTitle(session.title);
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 hover:bg-[#2d2d2d]"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                      </Button>
-                      
+
+                    {/* Action buttons */}
+                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       {sessions.length > 1 && (
-                        <Button
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteSession(session.sessionId);
                           }}
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 hover:bg-red-600/20 text-red-400 hover:text-red-300"
+                          className="p-1 hover:bg-red-500/20 rounded text-red-400 hover:text-red-300"
+                          title="Delete session"
                         >
                           <Trash2 className="w-3 h-3" />
-                        </Button>
+                        </button>
                       )}
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEditing(session.sessionId, session.title || '');
+                        }}
+                        className="p-1 hover:bg-blue-500/20 rounded text-blue-400 hover:text-blue-300"
+                        title="Rename session"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
+
+                  {/* Preview of last message */}
+                  {session.preview && (
+                    <div className="mt-1 text-xs opacity-60 truncate">
+                      {session.preview}
+                    </div>
+                  )}
                 </div>
               ))}
           </div>
         )}
       </div>
-      
-      {/* Footer Info */}
-      <div className="px-3 py-2 border-t border-[#2d2d30] text-xs text-[#858585]">
-        {activeSessionId && (
-          <div>
-            Active: {sessions.find(s => s.sessionId === activeSessionId)?.title}
-          </div>
-        )}
+
+      {/* Footer */}
+      <div className="p-2 border-t border-[#2d2d30]">
+        <div className="text-xs text-[#858585] flex items-center justify-between">
+          <span>
+            Active: {sessions?.find((s) => s.sessionId === activeSessionId)?.title || 'None'}
+          </span>
+        </div>
       </div>
     </div>
   );

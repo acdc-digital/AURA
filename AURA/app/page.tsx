@@ -3,7 +3,7 @@
 
 "use client";
 
-import { Copyright, AlertCircle } from "lucide-react";
+import { Copyright, AlertCircle, Fingerprint } from "lucide-react";
 import { DashActivityBar } from "./_components/activity/dashActivityBar";
 import { Navigator } from "./_components/editor/Navigator";
 import { DashSidebar } from "./_components/sidebar/dashSidebar";
@@ -86,10 +86,13 @@ export default function HomePage() {
         {/* Title Bar - 32px */}
         <header className="h-8 bg-[#181818] border-b border-[#2d2d2d] flex items-center px-0 select-none">
           {/* Title */}
-          <div className="flex-1 flex justify-start ml-2">
-            <span className="text-xs text-[#858585] font-sf">
-              AURA - Automate Your Aura
-            </span>
+          <div className="flex-1 flex justify-start items-center ml-2">
+            <div className="flex items-center gap-2">
+              <Fingerprint className="h-4 w-4 text-[#858585] border border-[#858585] rounded-xs p-0.5" />
+              <span className="text-xs text-[#858585] font-sf">
+                AURA - Automate Your Aura
+              </span>
+            </div>
           </div>
           
           {/* Theme Toggle */}
@@ -111,22 +114,17 @@ export default function HomePage() {
             {/* Sidebar - Fixed width */}
             <DashSidebar activePanel={activePanel} />
 
-            {/* Dashboard/Editor - Full height with space for terminal */}
-            <div
-              className="flex-1 flex flex-col overflow-hidden"
-              style={{
-                paddingBottom: isCollapsed ? '35px' : `${terminalHeight}vh`,
-                transition: isResizing ? 'none' : 'padding-bottom 200ms'
-              }}
-            >
+            {/* Dashboard/Editor - Full height, no space reserved for terminal */}
+            <div className="flex-1 flex flex-col overflow-hidden">
               <Navigator />
             </div>
 
-            {/* Terminal - Overlaid at bottom when expanded, or thin strip when collapsed */}
+            {/* Terminal - Completely overlaid at bottom, doesn't affect layout flow */}
             <div
               className={`absolute bottom-0 left-[240px] right-0 z-10 ${
                 isCollapsed ? 'h-[35px]' : ''
               }`}
+              // eslint-disable-next-line react/forbid-dom-props
               style={!isCollapsed ? { height: `${terminalHeight}vh`, transition: isResizing ? 'none' : 'height 200ms' } : undefined}
             >
               {/* Resize handle - only show when expanded */}

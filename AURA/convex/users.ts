@@ -391,9 +391,9 @@ export const needsOnboarding = query({
       return true; // New user needs onboarding
     }
 
-    // Check onboarding status
+    // Check onboarding status  
     const status = user.onboardingStatus;
-    return !status || status === "not_started" || status === "in_progress";
+    return !status || status === "not_started" || status === "in_progress" || status === "completion_pending";
   },
 });
 
@@ -403,6 +403,7 @@ export const updateOnboardingStatus = mutation({
     status: v.union(
       v.literal("not_started"),
       v.literal("in_progress"),
+      v.literal("completion_pending"),
       v.literal("completed"),
       v.literal("skipped")
     ),
@@ -423,7 +424,7 @@ export const updateOnboardingStatus = mutation({
     }
 
     const updateData: {
-      onboardingStatus: "not_started" | "in_progress" | "completed" | "skipped";
+      onboardingStatus: "not_started" | "in_progress" | "completion_pending" | "completed" | "skipped";
       updatedAt: number;
       onboardingCompletedAt?: number;
     } = {

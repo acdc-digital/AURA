@@ -5,7 +5,7 @@
 
 import { useTerminalStore } from "@/lib/store/terminal";
 import { useConvexAuth } from "convex/react";
-import { Bell, History, Loader2, Settings, Terminal as TerminalIcon } from "lucide-react";
+import { Bell, History, Loader2, Mic, Settings, Terminal as TerminalIcon } from "lucide-react";
 
 export function TerminalHeaderRow() {
   const { isAuthenticated } = useConvexAuth();
@@ -15,6 +15,8 @@ export function TerminalHeaderRow() {
     setActiveTab,
     alerts,
     toggleCollapse,
+    isVoiceMode,
+    toggleVoiceMode,
   } = useTerminalStore();
 
   return (
@@ -22,7 +24,7 @@ export function TerminalHeaderRow() {
       {/* Left side - Tab buttons and terminal tabs */}
       <div className="flex items-center h-full overflow-x-auto">
         {/* Navigation Tab Buttons */}
-        <div className="flex items-center h-full border-r border-[#ffffff20] pr-2">
+        <div className="flex items-center h-full pr-2">
           <button
             className={`text-xs h-[35px] px-3 min-w-[70px] flex items-center justify-center ${
               activeTab === 'terminal'
@@ -144,6 +146,17 @@ export function TerminalHeaderRow() {
             <span>Processing...</span>
           </div>
         )}
+        
+        {/* Microphone button */}
+        <button
+          className="h-[25px] px-2 text-white border border-[#cccccc40] hover:bg-[#ffffff20] rounded flex items-center justify-center mr-2 transition-colors duration-150 relative z-40"
+          onClick={() => {
+            toggleVoiceMode();
+          }}
+          title={isVoiceMode ? "Exit Voice Mode" : "Voice Input Mode"}
+        >
+          <Mic className={`w-3 h-3 ${isVoiceMode ? 'text-[#0ea5e9]' : ''}`} />
+        </button>
         
         {/* Collapse button with dynamic icon */}
         <button

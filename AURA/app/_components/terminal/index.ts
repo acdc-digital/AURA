@@ -1,7 +1,8 @@
 // TERMINAL EXPORTS
 // /Users/matthewsimon/Projects/AURA/AURA/app/_components/terminal/index.ts
 
-export { Terminal } from './Terminal';
+import TerminalComponent from './Terminal';
+export { TerminalComponent as Terminal };
 
 // Export individual tab displays
 export { AlertsDisplay } from './alerts';

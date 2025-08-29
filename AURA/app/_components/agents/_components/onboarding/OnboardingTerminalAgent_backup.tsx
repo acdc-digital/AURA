@@ -38,6 +38,7 @@ export const OnboardingTerminalAgent: FC<OnboardingTerminalAgentProps> = ({
   
   // Convex mutations and actions
   const handleOnboardingMessage = useAction(api.onboarding.handleOnboardingMessage);
+  const sendWelcome = useAction(api.onboarding.sendWelcomeMessage);
   const createChatSession = useMutation(api.chat.createSession);
 
   // Create or get session ID
@@ -78,7 +79,7 @@ export const OnboardingTerminalAgent: FC<OnboardingTerminalAgentProps> = ({
   // Memoize messages to prevent unnecessary re-renders
   const messages = useMemo(() => messagesData ?? [], [messagesData]);
 
-  // Initialize onboarding status (but don't send welcome message - parent component handles that)
+  // Initialize onboarding with welcome message
   useEffect(() => {
     const initializeOnboarding = async () => {
       if (!hasInitialized && isAuthenticated && user && currentSessionId) {
@@ -88,7 +89,11 @@ export const OnboardingTerminalAgent: FC<OnboardingTerminalAgentProps> = ({
           // Update user status to in_progress
           await updateOnboardingStatus({ status: "in_progress" });
           
-          // Note: Welcome message is sent by AdvancedTerminalDisplay to avoid duplicates
+          // Send welcome message
+          await sendWelcome({
+            sessionId: currentSessionId,
+            userId: user._id,
+          });
         } catch (error) {
           console.error("Failed to initialize onboarding:", error);
         }
@@ -96,7 +101,7 @@ export const OnboardingTerminalAgent: FC<OnboardingTerminalAgentProps> = ({
     };
     
     initializeOnboarding();
-  }, [hasInitialized, isAuthenticated, user, currentSessionId, updateOnboardingStatus]);
+  }, [hasInitialized, isAuthenticated, user, currentSessionId, updateOnboardingStatus, sendWelcome]);
 
   // Handle form submission
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -136,13 +141,6 @@ export const OnboardingTerminalAgent: FC<OnboardingTerminalAgentProps> = ({
       if (!result.success) {
         console.error('❌ Failed to process onboarding message:', result.error);
       }
-      
-      // Check if onboarding reached completion stage
-      if (result.currentStep === "completed" || result.currentStep === "completion_pending") {
-        console.log('🎯 Onboarding reached completion stage:', result.currentStep);
-        // The status is already updated on the backend
-        // The component will continue showing until user clicks "Continue"
-      }
     } catch (error) {
       console.error('❌ Error in handleSubmit:', error);
     } finally {
@@ -177,7 +175,12 @@ export const OnboardingTerminalAgent: FC<OnboardingTerminalAgentProps> = ({
             {messages.map((message, index) => (
               <TerminalMessage
                 key={message._id || `${message.role}-${index}`}
-                message={message}
+                message={{
+                  role: message.role as "user" | "assistant" | "system",
+                  content: message.content,
+                  timestamp: message._creationTime,
+                }}
+                className="mb-2"
               />
             ))}
           </ConversationContent>

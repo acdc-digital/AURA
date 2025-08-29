@@ -1,5 +1,5 @@
-// ONBOARDING SKIP BUTTON - Interactive button for skipping onboarding process
-// /Users/matthewsimon/Projects/AURA/AURA/app/_components/terminal/chat/_components/OnboardingSkipButton.tsx
+// ONBOARDING CONTINUE BUTTON - Interactive button for completing onboarding process
+// /Users/matthewsimon/Projects/AURA/AURA/app/_components/terminal/chat/_components/OnboardingContinueButton.tsx
 
 "use client";
 
@@ -11,25 +11,24 @@ import { useUser } from "@/lib/hooks";
 import { ArrowRight } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 
-interface OnboardingSkipButtonProps {
+interface OnboardingContinueButtonProps {
   messageId: Id<"chatMessages">;
-  onSkipped?: () => void;
+  onContinued?: () => void;
 }
 
-export function OnboardingSkipButton({ 
+export function OnboardingContinueButton({ 
   messageId, 
-  onSkipped 
-}: OnboardingSkipButtonProps) {
-  const { handleSkipOnboarding } = useOnboarding();
+  onContinued 
+}: OnboardingContinueButtonProps) {
+  const { handleContinueOnboarding } = useOnboarding();
   const { user } = useUser();
   const updateComponent = useMutation(api.chat.updateInteractiveComponent);
   
   // Get the message to extract sessionId
   const message = useQuery(api.chat.getMessage, { messageId });
 
-  const handleSkip = async () => {
+  const handleContinue = async () => {
     try {
-      console.log("🎯 Skip button clicked, calling handleSkipOnboarding...");
       if (!message?.sessionId) {
         console.error("No session ID found for message");
         return;
@@ -40,45 +39,46 @@ export function OnboardingSkipButton({
         return;
       }
 
-      console.log("📤 Calling handleSkipOnboarding with:", {
+      console.log("🎯 Continue button clicked, calling handleContinueOnboarding...");
+      console.log("📤 Calling handleContinueOnboarding with:", {
         sessionId: message.sessionId,
-        userId: user._id
+        userId: user._id,
       });
 
-      // Handle complete skip workflow (updates status + sends orchestrator welcome)
-      await handleSkipOnboarding({
+      // Handle complete continue workflow (updates status + sends orchestrator welcome)
+      await handleContinueOnboarding({
         sessionId: message.sessionId,
         userId: user._id,
       });
       
-      console.log("✅ handleSkipOnboarding completed, updating component status...");
-
       // Mark component as completed
       await updateComponent({
         messageId,
         status: "completed",
-        result: { action: "skipped" }
+        result: { action: "continued" }
       });
       
-      console.log("🎉 Skip process completed successfully");
-
+      console.log("✅ handleContinueOnboarding completed, updating component status...");
+      
       // Optional callback
-      if (onSkipped) {
-        onSkipped();
+      if (onContinued) {
+        onContinued();
       }
     } catch (error) {
-      console.error("❌ Failed to skip onboarding:", error);
+      console.error("Failed to continue from onboarding:", error);
     }
-  };  return (
+  };
+
+  return (
     <div className="mt-3 max-w-xs">
       <Button
-        onClick={handleSkip}
-        variant="outline"
+        onClick={handleContinue}
+        variant="default"
         size="sm"
-        className="bg-[#1e1e1e] border-[#2d2d2d] text-[#cccccc] hover:bg-[#2d2d2d] hover:text-white text-xs px-2 py-1 h-6"
+        className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 h-6"
       >
         <ArrowRight className="w-3 h-3 mr-1.5" />
-        Skip
+        Continue
       </Button>
     </div>
   );

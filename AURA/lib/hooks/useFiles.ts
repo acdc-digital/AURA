@@ -112,35 +112,65 @@ export function useFiles(projectId?: Id<"projects">): UseFilesReturn {
     return files.filter(file => file.platform === platform && !file.isDeleted);
   }, [files]);
 
-  // Actions
+  // Actions with proper error handling
   const createFile = useCallback(async (data: CreateFileData): Promise<Id<"files">> => {
-    return await createFileMutation({
-      ...data,
-      lastModified: Date.now(),
-    });
+    try {
+      return await createFileMutation({
+        ...data,
+        lastModified: Date.now(),
+      });
+    } catch (error) {
+      console.error('Failed to create file:', error);
+      throw new Error(`Unable to create file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [createFileMutation]);
 
   const updateFile = useCallback(async (fileId: Id<"files">, data: UpdateFileData): Promise<void> => {
-    await updateFileMutation({
-      id: fileId,
-      ...data,
-    });
+    try {
+      await updateFileMutation({
+        id: fileId,
+        ...data,
+      });
+    } catch (error) {
+      console.error('Failed to update file:', error);
+      throw new Error(`Unable to update file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [updateFileMutation]);
 
   const deleteFile = useCallback(async (fileId: Id<"files">): Promise<void> => {
-    await deleteFileMutation({ id: fileId });
+    try {
+      await deleteFileMutation({ id: fileId });
+    } catch (error) {
+      console.error('Failed to delete file:', error);
+      throw new Error(`Unable to delete file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [deleteFileMutation]);
 
   const moveToTrash = useCallback(async (fileId: Id<"files">): Promise<void> => {
-    await softDeleteMutation({ id: fileId });
+    try {
+      await softDeleteMutation({ id: fileId });
+    } catch (error) {
+      console.error('Failed to move file to trash:', error);
+      throw new Error(`Unable to move file to trash: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [softDeleteMutation]);
 
   const restoreFile = useCallback(async (fileId: Id<"files">): Promise<void> => {
-    await restoreFileMutation({ id: fileId });
+    try {
+      await restoreFileMutation({ id: fileId });
+    } catch (error) {
+      console.error('Failed to restore file:', error);
+      throw new Error(`Unable to restore file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [restoreFileMutation]);
 
   const duplicateFile = useCallback(async (fileId: Id<"files">): Promise<Id<"files">> => {
-    return await duplicateFileMutation({ id: fileId });
+    try {
+      return await duplicateFileMutation({ id: fileId });
+    } catch (error) {
+      console.error('Failed to duplicate file:', error);
+      throw new Error(`Unable to duplicate file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [duplicateFileMutation]);
 
   return {

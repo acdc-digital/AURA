@@ -1,74 +1,112 @@
-// TERMINAL COMPONENT - AURA Advanced Terminal Panel with Multi-Terminal Support
+// TERMINAL COMPONENT - Main terminal interface with tabs and session management
 // /Users/matthewsimon/Projects/AURA/AURA/app/_components/terminal/Terminal.tsx
 
 "use client";
 
+import React, { useEffect, useRef } from "react";
 import { useTerminalStore } from "@/lib/store/terminal";
-import { useSessionSync } from "@/lib/hooks/useSessionSync";
+import { useTerminal } from "@/lib/hooks/useTerminal";
 import { useConvexAuth } from "convex/react";
-import { Terminal as TerminalIcon } from "lucide-react";
-import { useEffect } from "react";
-import { AlertsDisplay } from "./alerts";
-import { HistoryDisplay } from "./history";
-import { SettingsDisplay } from "./settings";
-import { AdvancedTerminalDisplay, TerminalHeaderRow } from "./_components";
+import { TerminalIcon, Mic } from "lucide-react";
+import { AdvancedTerminalDisplay } from "./_components/AdvancedTerminalDisplay";
+import { TerminalHeaderRow } from "./_components/TerminalHeaderRow";
+import { useSessionSync } from "@/lib/hooks/useSessionSync";
 
-export function Terminal() {
-  const { 
+export default function Terminal() {
+  const {
     isCollapsed,
     toggleCollapse,
     activeTab,
     setActiveTab,
-    terminals,
     activeTerminalId,
-    createTerminal,
+    isVoiceMode,
+    toggleVoiceMode,
   } = useTerminalStore();
+  
+  const { terminals, createTerminal } = useTerminal();
   const { isAuthenticated } = useConvexAuth();
+
+  // Track if we're already creating a terminal to prevent duplicates
+  const creatingTerminalRef = useRef(false);
 
   // Initialize session sync once at the terminal level
   useSessionSync();
 
-  // Auto-create chat terminal when terminal tab is active but no terminal exists
+  // Ensure we always have a terminal when authenticated
   useEffect(() => {
-    if (activeTab === 'terminal' && isAuthenticated && (!activeTerminalId || !terminals.has(activeTerminalId))) {
-      console.log("Creating terminal for authenticated user");
-      createTerminal(undefined, "Chat");
+    if (isAuthenticated && !creatingTerminalRef.current) {
+      // If no active terminal or the active terminal doesn't exist, handle terminal creation/selection
+      if (!activeTerminalId || !terminals.has(activeTerminalId)) {
+        // Check if we have any terminals at all
+        if (terminals.size === 0) {
+          console.log("Creating initial terminal for authenticated user");
+          creatingTerminalRef.current = true;
+          try {
+            createTerminal(undefined, "Chat");
+            creatingTerminalRef.current = false;
+          } catch (error) {
+            console.error("Failed to create terminal:", error);
+            creatingTerminalRef.current = false;
+          }
+        } else {
+          // We have terminals but no active one selected, select the first one
+          const firstTerminalId = Array.from(terminals.keys())[0];
+          const { setActiveTerminal } = useTerminalStore.getState();
+          setActiveTerminal(firstTerminalId);
+          console.log("Set active terminal to:", firstTerminalId);
+        }
+      }
     }
-  }, [isAuthenticated, terminals, createTerminal, activeTab, activeTerminalId]);
-
-  const renderActiveTabContent = () => {
+  }, [isAuthenticated, terminals, createTerminal, activeTerminalId]);  const renderActiveTabContent = () => {
     switch (activeTab) {
       case 'terminal':
-        if (!activeTerminalId || !terminals.has(activeTerminalId)) {
-          if (isAuthenticated) {
-            // Terminal creation is handled by useEffect
-            return (
-              <div className="flex-1 bg-[#0e0e0e] flex items-center justify-center">
-                <div className="text-xs text-[#858585]">Starting chat...</div>
-              </div>
-            );
-          } else {
-            return (
-              <div className="flex-1 bg-[#0e0e0e] flex items-center justify-center">
-                <div className="text-xs text-[#858585]">Please sign in to use chat</div>
-              </div>
-            );
-          }
+        if (!isAuthenticated) {
+          return (
+            <div className="flex-1 bg-[#0e0e0e] flex items-center justify-center">
+              <div className="text-xs text-[#858585]">Please sign in to use chat</div>
+            </div>
+          );
         }
         
-        return <AdvancedTerminalDisplay terminalId={activeTerminalId} />;
+        // If we have an active terminal ID and it exists, render it
+        if (activeTerminalId && terminals.has(activeTerminalId)) {
+          return <AdvancedTerminalDisplay terminalId={activeTerminalId} />;
+        }
+        
+        // Loading state while terminal is being created
+        return (
+          <div className="flex-1 bg-[#0e0e0e] flex items-center justify-center">
+            <div className="text-xs text-[#858585]">Initializing terminal...</div>
+          </div>
+        );
 
       case 'history':
-        return <HistoryDisplay />;
+        return (
+          <div className="flex-1 bg-[#0e0e0e] flex items-center justify-center">
+            <div className="text-xs text-[#858585]">History view coming soon...</div>
+          </div>
+        );
 
       case 'alerts':
-        return <AlertsDisplay />;
+        return (
+          <div className="flex-1 bg-[#0e0e0e] flex items-center justify-center">
+            <div className="text-xs text-[#858585]">Alerts view coming soon...</div>
+          </div>
+        );
 
       case 'settings':
-        return <SettingsDisplay />;
+        return (
+          <div className="flex-1 bg-[#0e0e0e] flex items-center justify-center">
+            <div className="text-xs text-[#858585]">Settings view coming soon...</div>
+          </div>
+        );
 
       default:
-        return null;
+        return (
+          <div className="flex-1 bg-[#0e0e0e] flex items-center justify-center">
+            <div className="text-xs text-[#858585]">Select a tab to begin</div>
+          </div>
+        );
     }
   };
 
@@ -92,14 +130,28 @@ export function Terminal() {
             </button>
           </div>
           
-          {/* Expand button - positioned on far right */}
-          <button
-            className="h-[25px] px-2 text-white bg-transparent border border-[#cccccc40] hover:bg-[#ffffff20] rounded flex items-center justify-center mr-2 text-xs transition-colors duration-150"
-            onClick={toggleCollapse}
-            title="Expand Terminal"
-          >
-            +
-          </button>
+          {/* Right side buttons */}
+          <div className="flex items-center space-x-2">
+            {/* Microphone button */}
+            <button
+              className="h-[25px] px-2 text-white bg-transparent border border-[#cccccc40] hover:bg-[#ffffff20] rounded flex items-center justify-center text-xs transition-colors duration-150"
+              onClick={() => {
+                toggleVoiceMode();
+              }}
+              title={isVoiceMode ? "Exit Voice Mode" : "Voice Input Mode"}
+            >
+              <Mic className={`w-3 h-3 ${isVoiceMode ? 'text-[#0ea5e9]' : ''}`} />
+            </button>
+            
+            {/* Expand button */}
+            <button
+              className="h-[25px] px-2 text-white bg-transparent border border-[#cccccc40] hover:bg-[#ffffff20] rounded flex items-center justify-center mr-2 text-xs transition-colors duration-150"
+              onClick={toggleCollapse}
+              title="Expand Terminal"
+            >
+              +
+            </button>
+          </div>
         </div>
       ) : (
         // Expanded view - full terminal interface

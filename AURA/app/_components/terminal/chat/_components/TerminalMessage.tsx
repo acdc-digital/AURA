@@ -9,6 +9,7 @@ import { Copy, RotateCcw, ThumbsUp, ThumbsDown, User } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { ThinkingMessage } from "./ThinkingMessage";
 import { OnboardingSkipButton } from "./OnboardingSkipButton";
+import { OnboardingContinueButton } from "./OnboardingContinueButton";
 
 interface TerminalMessageProps {
   message: {
@@ -149,6 +150,17 @@ export const TerminalMessage: FC<TerminalMessageProps> = ({
                 </TypewriterResponse>
                 
                 {/* Interactive Components - only show for completed messages */}
+                {(() => {
+                  console.log("🔍 Interactive component check:", {
+                    messageId: message._id,
+                    isStreaming,
+                    hasInteractiveComponent: !!message.interactiveComponent,
+                    interactiveComponent: message.interactiveComponent,
+                    type: message.interactiveComponent?.type,
+                    status: message.interactiveComponent?.status
+                  });
+                  return null;
+                })()}
                 {!isStreaming && message.interactiveComponent && message.interactiveComponent.status === "pending" && (
                   <div className="mt-3">
                     {message.interactiveComponent.type === "onboarding_skip_button" && (
@@ -162,6 +174,22 @@ export const TerminalMessage: FC<TerminalMessageProps> = ({
                           messageId={message._id}
                           onSkipped={() => {
                             console.log("👋 Skip button clicked");
+                          }}
+                        />
+                      </>
+                    )}
+                    {message.interactiveComponent?.type === "onboarding_continue_button" && (
+                      <>
+                        {console.log("🎬 Rendering OnboardingContinueButton", {
+                          messageId: message._id,
+                          isStreaming,
+                          status: message.interactiveComponent?.status,
+                          interactiveComponent: message.interactiveComponent
+                        })}
+                        <OnboardingContinueButton
+                          messageId={message._id}
+                          onContinued={() => {
+                            console.log("🎯 Continue button clicked");
                           }}
                         />
                       </>

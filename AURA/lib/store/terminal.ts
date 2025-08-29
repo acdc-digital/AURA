@@ -1,4 +1,4 @@
-// TERMINAL STORE - Terminal panel state management with multi-terminal support
+// TERMINAL UI STORE - Terminal panel UI state management (business data in Convex)
 // /Users/matthewsimon/Projects/AURA/AURA/lib/store/terminal.ts
 
 import { create } from "zustand";
@@ -12,35 +12,21 @@ interface Alert {
   timestamp: number;
 }
 
-interface Terminal {
-  id: string;
-  title: string;
-  buffer: string[];
-  cursorPosition: number;
-  isProcessing: boolean;
-  lastActivity: number;
-  currentDirectory: string;
-  process: {
-    pid?: number;
-    command?: string;
-    status: "idle" | "running" | "completed" | "error";
-  };
-}
-
-interface TerminalState {
+interface TerminalUIState {
   // Panel state
   isCollapsed: boolean;
   activeTab: "terminal" | "history" | "alerts" | "settings";
   size: number;
   height: number; // Terminal height in pixels
 
-  // Multi-terminal support
-  terminals: Map<string, Terminal>;
+  // UI-only terminal management
   activeTerminalId: string | null;
-  commandHistory: string[]; // Global command history
-  isProcessing: boolean; // Any terminal processing
+  isProcessing: boolean; // UI processing state
 
-  // Alerts
+  // Mode states
+  isVoiceMode: boolean; // Voice input mode
+
+  // UI alerts
   alerts: Alert[];
 
   // Actions - Panel management
@@ -50,18 +36,13 @@ interface TerminalState {
   setSize: (size: number) => void;
   setHeight: (height: number) => void;
 
-  // Actions - Terminal management
-  createTerminal: (id?: string, title?: string) => string;
-  removeTerminal: (id: string) => void;
-  setActiveTerminal: (id: string) => void;
-  updateTerminal: (id: string, updates: Partial<Terminal>) => void;
-  addToBuffer: (id: string, content: string) => void;
-  clearBuffer: (id: string) => void;
-  setProcessing: (id: string, isProcessing: boolean) => void;
+  // Actions - Mode management
+  setVoiceMode: (enabled: boolean) => void;
+  toggleVoiceMode: () => void;
 
-  // Actions - Command history
-  addToHistory: (command: string) => void;
-  clearHistory: () => void;
+  // Actions - UI state
+  setActiveTerminal: (id: string) => void;
+  setProcessing: (isProcessing: boolean) => void;
 
   // Actions - Alerts
   addAlert: (alert: Omit<Alert, "id" | "timestamp">) => void;
@@ -69,213 +50,95 @@ interface TerminalState {
   removeAlert: (id: string) => void;
 }
 
-export const useTerminalStore = create<TerminalState>()(
+export const useTerminalStore = create<TerminalUIState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       // Initial state
-      isCollapsed: true,
+      isCollapsed: false,
       activeTab: "terminal",
       size: 40,
-      height: 400, // Default terminal height
+      height: 400,
 
-      // Multi-terminal state
-      terminals: new Map(),
-  activeTerminalId: null,
-  commandHistory: [],
-  isProcessing: false,
-
-  // Alerts
-  alerts: [],
-
-  // Panel actions
-  setCollapsed: (collapsed: boolean) => set({ isCollapsed: collapsed }),
-
-  toggleCollapse: () =>
-    set((state: TerminalState) => ({
-      isCollapsed: !state.isCollapsed,
-      // Reset to terminal tab when opening
-      activeTab: !state.isCollapsed ? state.activeTab : "terminal",
-    })),
-
-  setActiveTab: (tab: "terminal" | "history" | "alerts" | "settings") =>
-    set({ activeTab: tab }),
-
-  setSize: (size: number) => set({ size }),
-
-  setHeight: (height: number) => set({ height }),
-
-  // Terminal management actions
-  createTerminal: (id?: string, title?: string) => {
-    const terminalId =
-      id ?? `terminal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const terminal: Terminal = {
-      id: terminalId,
-      title: title ?? `Terminal ${get().terminals.size + 1}`,
-      buffer: [`Welcome to AURA Terminal (${terminalId})`],
-      cursorPosition: 0,
+      // UI-only terminal state
+      activeTerminalId: null,
       isProcessing: false,
-      lastActivity: Date.now(),
-      currentDirectory: "~",
-      process: {
-        status: "idle",
+
+      // Mode states
+      isVoiceMode: false,
+
+      // Alerts (UI only)
+      alerts: [],
+
+      // Panel actions
+      setCollapsed: (collapsed: boolean) => set({ isCollapsed: collapsed }),
+
+      toggleCollapse: () =>
+        set((state: TerminalUIState) => ({
+          isCollapsed: !state.isCollapsed,
+          activeTab: !state.isCollapsed ? state.activeTab : "terminal",
+        })),
+
+      setActiveTab: (tab: "terminal" | "history" | "alerts" | "settings") =>
+        set({ activeTab: tab }),
+
+      setSize: (size: number) => set({ size }),
+
+      setHeight: (height: number) => set({ height }),
+
+      // Mode management actions
+      setVoiceMode: (enabled: boolean) => set({ isVoiceMode: enabled }),
+
+      toggleVoiceMode: () =>
+        set((state: TerminalUIState) => ({
+          isVoiceMode: !state.isVoiceMode
+        })),
+
+      // UI state actions
+      setActiveTerminal: (id: string) => {
+        set({ activeTerminalId: id });
       },
-    };
 
-    set((state) => {
-      const newTerminals = new Map(state.terminals);
-      newTerminals.set(terminalId, terminal);
+      setProcessing: (isProcessing: boolean) => {
+        set({ isProcessing });
+      },
 
-      return {
-        terminals: newTerminals,
-        activeTerminalId: state.activeTerminalId ?? terminalId, // Set as active if no other active terminal
-      };
-    });
+      // Alert actions
+      addAlert: (alert: Omit<Alert, "id" | "timestamp">) => {
+        const newAlert: Alert = {
+          ...alert,
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+        };
+        
+        set((state: TerminalUIState) => ({
+          alerts: [...state.alerts, newAlert],
+        }));
+      },
 
-    return terminalId;
-  },
+      clearAlerts: () => set({ alerts: [] }),
 
-  removeTerminal: (id: string) =>
-    set((state) => {
-      const newTerminals = new Map(state.terminals);
-      newTerminals.delete(id);
-
-      // If this was the active terminal, switch to another one
-      let newActiveId = state.activeTerminalId;
-      if (state.activeTerminalId === id) {
-        const remaining = Array.from(newTerminals.keys());
-        newActiveId = remaining.length > 0 ? remaining[0] : null;
-      }
-
-      return {
-        terminals: newTerminals,
-        activeTerminalId: newActiveId,
-      };
-    }),
-
-  setActiveTerminal: (id: string) =>
-    set((state) => {
-      // Only set if terminal exists
-      if (state.terminals.has(id)) {
-        return { activeTerminalId: id };
-      }
-      return {};
-    }),
-
-  updateTerminal: (id: string, updates: Partial<Terminal>) =>
-    set((state) => {
-      const terminal = state.terminals.get(id);
-      if (!terminal) return {};
-
-      const newTerminals = new Map(state.terminals);
-      newTerminals.set(id, {
-        ...terminal,
-        ...updates,
-        lastActivity: Date.now(),
-      });
-
-      return { terminals: newTerminals };
-    }),
-
-  addToBuffer: (id: string, content: string) =>
-    set((state) => {
-      const terminal = state.terminals.get(id);
-      if (!terminal) return {};
-
-      const newBuffer = [...terminal.buffer, content];
-
-      // Trim buffer if it gets too large (performance optimization)
-      if (newBuffer.length > 10000) {
-        newBuffer.splice(0, newBuffer.length - 8000); // Keep recent 8000 lines
-      }
-
-      const newTerminals = new Map(state.terminals);
-      newTerminals.set(id, {
-        ...terminal,
-        buffer: newBuffer,
-        lastActivity: Date.now(),
-      });
-
-      return { terminals: newTerminals };
-    }),
-
-  clearBuffer: (id: string) =>
-    set((state) => {
-      const terminal = state.terminals.get(id);
-      if (!terminal) return {};
-
-      const newTerminals = new Map(state.terminals);
-      newTerminals.set(id, {
-        ...terminal,
-        buffer: [`Terminal cleared (${id})`],
-        lastActivity: Date.now(),
-      });
-
-      return { terminals: newTerminals };
-    }),
-
-  setProcessing: (id: string, isProcessing: boolean) =>
-    set((state) => {
-      const terminal = state.terminals.get(id);
-      if (!terminal) return {};
-
-      const newTerminals = new Map(state.terminals);
-      newTerminals.set(id, {
-        ...terminal,
-        isProcessing,
-        lastActivity: Date.now(),
-      });
-
-      // Update global processing state
-      const globalProcessing = Array.from(newTerminals.values()).some(
-        (t) => t.isProcessing,
-      );
-
-      return {
-        terminals: newTerminals,
-        isProcessing: globalProcessing,
-      };
-    }),
-
-  // Command history actions
-  addToHistory: (command: string) =>
-    set((state) => {
-      const newHistory = [...state.commandHistory, command];
-
-      // Limit history size
-      if (newHistory.length > 1000) {
-        newHistory.splice(0, newHistory.length - 800); // Keep recent 800 commands
-      }
-
-      return { commandHistory: newHistory };
-    }),
-
-  clearHistory: () => set({ commandHistory: [] }),
-
-  // Alert actions
-  addAlert: (alert: Omit<Alert, "id" | "timestamp">) => {
-    const newAlert: Alert = {
-      ...alert,
-      id: `alert-${Date.now()}-${Math.random()}`,
-      timestamp: Date.now(),
-    };
-    set((state: TerminalState) => ({
-      alerts: [...state.alerts, newAlert],
-    }));
-  },
-
-  clearAlerts: () => set({ alerts: [] }),
-
-  removeAlert: (id: string) =>
-    set((state) => ({
-      alerts: state.alerts.filter((alert) => alert.id !== id),
-    })),
+      removeAlert: (id: string) =>
+        set((state: TerminalUIState) => ({
+          alerts: state.alerts.filter((alert: Alert) => alert.id !== id),
+        })),
     }),
     {
-      name: 'terminal-storage',
+      name: 'aura-terminal-ui-store',
       partialize: (state) => ({
-        height: state.height,
         isCollapsed: state.isCollapsed,
+        activeTab: state.activeTab,
+        size: state.size,
+        height: state.height,
+        activeTerminalId: state.activeTerminalId,
+        isVoiceMode: state.isVoiceMode,
       }),
+      onRehydrateStorage: () => (state) => {
+        // If this is a fresh session (no activeTerminalId), ensure terminal is expanded
+        if (state && !state.activeTerminalId && state.isCollapsed) {
+          console.log("Fresh session detected, expanding terminal");
+          state.isCollapsed = false;
+        }
+      },
     }
   )
 );

@@ -39,10 +39,10 @@ export function DashActivityBar({ activePanel, onPanelChange }: ActivityBarProps
     { id: "extensions", icon: Puzzle, label: "Extensions" },
     { id: "trash", icon: Trash2, label: "Trash" },
     { id: "debug", icon: Bug, label: "Debug Tools" },
+    { id: "account", icon: User, label: "User Account" },
   ];
 
   const bottomItems: Array<{ id: PanelType; icon: LucideIcon; label: string }> = [
-    { id: "account", icon: User, label: "User Account" },
     { id: "settings", icon: Settings, label: "Settings" },
   ];
 
@@ -98,39 +98,6 @@ export function DashActivityBar({ activePanel, onPanelChange }: ActivityBarProps
           const Icon = item.icon;
           const isActive = activePanel === item.id;
           
-          return (
-            <Button
-              key={item.id}
-              variant="ghost"
-              size="icon"
-              onClick={() => handleActivityClick(item.id)}
-              disabled={!isAuthenticated && item.id !== 'account'}
-              className={`
-                w-9 h-9 rounded-none hover:bg-[#2d2d2d] relative
-                ${isActive 
-                  ? 'bg-[#2d2d2d] border-l-2 border-[#007acc]' 
-                  : 'border-l-2 border-transparent'
-                }
-                ${!isAuthenticated && item.id !== 'account' ? 'opacity-50 cursor-not-allowed' : ''}
-              `}
-              title={isAuthenticated || item.id === 'account' ? item.label : 'Sign in to access'}
-            >
-              <Icon
-                className={`w-5 h-5 ${
-                  isActive ? 'text-[#cccccc]' : 'text-[#858585]'
-                }`}
-              />
-            </Button>
-          );
-        })}
-      </div>
-
-      {/* Bottom Section */}
-      <div className="mt-auto mb-2 flex flex-col items-center space-y-1">
-        {bottomItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activePanel === item.id;
-          
           // Special handling for account icon
           if (item.id === 'account') {
             return (
@@ -156,6 +123,39 @@ export function DashActivityBar({ activePanel, onPanelChange }: ActivityBarProps
               </button>
             );
           }
+          
+          return (
+            <Button
+              key={item.id}
+              variant="ghost"
+              size="icon"
+              onClick={() => handleActivityClick(item.id)}
+              disabled={!isAuthenticated}
+              className={`
+                w-9 h-9 rounded-none hover:bg-[#2d2d2d] relative
+                ${isActive 
+                  ? 'bg-[#2d2d2d] border-l-2 border-[#007acc]' 
+                  : 'border-l-2 border-transparent'
+                }
+                ${!isAuthenticated ? 'opacity-50 cursor-not-allowed' : ''}
+              `}
+              title={isAuthenticated ? item.label : 'Sign in to access'}
+            >
+              <Icon
+                className={`w-5 h-5 ${
+                  isActive ? 'text-[#cccccc]' : 'text-[#858585]'
+                }`}
+              />
+            </Button>
+          );
+        })}
+      </div>
+
+      {/* Bottom Section */}
+      <div className="mt-auto mb-2 flex flex-col items-center space-y-1">
+        {bottomItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activePanel === item.id;
           
           return (
             <Button

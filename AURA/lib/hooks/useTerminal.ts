@@ -3,7 +3,8 @@
 
 import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
+import { useTerminalStore } from "@/lib/store/terminal";
 
 export interface Terminal {
   id: string;
@@ -35,6 +36,29 @@ export function useTerminal() {
   const saveCommandMutation = useMutation(api.terminal.saveTerminalCommand);
   const updateStatusMutation = useMutation(api.terminal.updateTerminalStatus);
 
+  // Client-side terminal management
+  const [terminals, setTerminals] = useState<Map<string, Terminal>>(new Map());
+
+  // Sync terminals from Convex sessions
+  useEffect(() => {
+    if (sessions) {
+      const terminalMap = new Map<string, Terminal>();
+      sessions.forEach(session => {
+        const terminal: Terminal = {
+          id: session.terminalId,
+          title: session.title || "Terminal",
+          buffer: session.buffer || [],
+          currentDirectory: session.currentDirectory || "~",
+          status: "active",
+          lastActivity: Date.now(),
+          createdAt: Date.now(),
+        };
+        terminalMap.set(session.terminalId, terminal);
+      });
+      setTerminals(terminalMap);
+    }
+  }, [sessions]);
+
   // Save terminal session to Convex
   const saveSession = useCallback(
     async (terminal: Terminal) => {
@@ -51,6 +75,44 @@ export function useTerminal() {
       }
     },
     [saveSessionMutation],
+  );
+
+  // Create a new terminal session
+  const createTerminal = useCallback(
+    (id?: string, title?: string) => {
+      try {
+        const terminalId = id || crypto.randomUUID();
+        const terminal: Terminal = {
+          id: terminalId,
+          title: title || `Terminal ${terminalId.slice(0, 8)}`,
+          buffer: [],
+          currentDirectory: "~",
+          status: "active",
+          lastActivity: Date.now(),
+          createdAt: Date.now(),
+        };
+
+        // Add to terminals map
+        const newTerminals = new Map(terminals);
+        newTerminals.set(terminalId, terminal);
+        setTerminals(newTerminals);
+        
+        // Update UI store to set active terminal
+        const { setActiveTerminal } = useTerminalStore.getState();
+        setActiveTerminal(terminalId);
+        
+        // Save to Convex asynchronously
+        saveSession(terminal).catch(error => {
+          console.error("Failed to save terminal session:", error);
+        });
+        
+        return terminal;
+      } catch (error) {
+        console.error("Failed to create terminal:", error);
+        throw error;
+      }
+    },
+    [saveSession, terminals, setTerminals],
   );
 
   // Save command to history
@@ -95,9 +157,11 @@ export function useTerminal() {
   return {
     // Data
     sessions: sessions ?? [],
+    terminals,
     isLoading: sessions === undefined,
 
     // Actions
+    createTerminal,
     saveSession,
     saveCommand,
     updateStatus,

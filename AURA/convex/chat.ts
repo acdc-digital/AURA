@@ -1,6 +1,7 @@
 // CONVEX CHAT FUNCTIONS - Chat message management for agent system
 // /Users/matthewsimon/Projects/AURA/AURA/convex/chat.ts
 
+import { ConvexError } from "convex/values";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
@@ -45,7 +46,8 @@ export const addMessage = mutation({
         v.literal("edit_instructions_input"),
         v.literal("multi_file_selector"),
         v.literal("url_input"),
-        v.literal("onboarding_skip_button")
+        v.literal("onboarding_skip_button"),
+        v.literal("onboarding_continue_button")
       ),
       data: v.optional(v.any()),
       status: v.union(v.literal("pending"), v.literal("completed"), v.literal("cancelled")),
@@ -54,12 +56,41 @@ export const addMessage = mutation({
     isTemporary: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const messageId = await ctx.db.insert("chatMessages", {
-      ...args,
-      createdAt: Date.now(),
-    });
-    
-    return messageId;
+    try {
+      if (!args.content?.trim()) {
+        throw new ConvexError("Message content is required");
+      }
+      
+      // Debug logging for interactive components
+      if (args.interactiveComponent) {
+        console.log("💾 Saving message with interactive component:", {
+          type: args.interactiveComponent.type,
+          status: args.interactiveComponent.status,
+          data: args.interactiveComponent.data,
+          contentPreview: args.content.substring(0, 50) + "..."
+        });
+      }
+      
+      const messageId = await ctx.db.insert("chatMessages", {
+        ...args,
+        createdAt: Date.now(),
+      });
+      
+      // Verify what was actually saved
+      if (args.interactiveComponent) {
+        const savedMessage = await ctx.db.get(messageId);
+        console.log("✅ Message saved with ID:", messageId);
+        console.log("🔍 Saved interactive component:", savedMessage?.interactiveComponent);
+      }
+      
+      return messageId;
+    } catch (error) {
+      console.error('Error adding chat message:', error);
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+      throw new ConvexError(`Failed to add message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 });
 
@@ -76,7 +107,9 @@ export const updateMessage = mutation({
         v.literal("file_selector"),
         v.literal("edit_instructions_input"),
         v.literal("multi_file_selector"),
-        v.literal("url_input")
+        v.literal("url_input"),
+        v.literal("onboarding_skip_button"),
+        v.literal("onboarding_continue_button")
       ),
       data: v.optional(v.any()),
       status: v.union(v.literal("pending"), v.literal("completed"), v.literal("cancelled")),
@@ -84,7 +117,20 @@ export const updateMessage = mutation({
     })),
   },
   handler: async (ctx, { id, ...updates }) => {
-    await ctx.db.patch(id, updates);
+    try {
+      const message = await ctx.db.get(id);
+      if (!message) {
+        throw new ConvexError("Message not found");
+      }
+      
+      await ctx.db.patch(id, updates);
+    } catch (error) {
+      console.error('Error updating chat message:', error);
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+      throw new ConvexError(`Failed to update message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 });
 

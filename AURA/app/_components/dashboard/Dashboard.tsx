@@ -7,6 +7,7 @@ import { FC } from 'react'
 import { cn } from '@/lib/utils'
 import { X, Plus, Code, Database } from 'lucide-react'
 import { IdentityGuidelinesTab } from './_components/identityTab/IdentityGuidelinesTab'
+import { AgentsTab } from './_components/agentsTab/AgentsTab'
 import { useEditorStore } from '@/lib/store/editor'
 
 interface DashboardProps {
@@ -20,6 +21,8 @@ export const Dashboard: FC<DashboardProps> = ({ className }) => {
     switch (tabType) {
       case 'identity-guidelines':
         return <IdentityGuidelinesTab />;
+      case 'agent':
+        return <AgentsTab />;
       case 'welcome':
         return (
           <div className="p-8 text-center">

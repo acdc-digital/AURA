@@ -169,33 +169,68 @@ export function useTrash(): UseTrashReturn {
     return items.sort((a, b) => b.deletedAt - a.deletedAt);
   }, [deletedFiles, deletedProjects])();
 
-  // Actions
+  // Actions with proper error handling
   const moveFileToTrash = useCallback(async (fileId: Id<"files">, deletedBy?: string): Promise<Id<"deletedFiles">> => {
-    return await moveFileToTrashMutation({ id: fileId, deletedBy });
+    try {
+      return await moveFileToTrashMutation({ id: fileId, deletedBy });
+    } catch (error) {
+      console.error('Failed to move file to trash:', error);
+      throw new Error(`Unable to move file to trash: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [moveFileToTrashMutation]);
 
   const moveProjectToTrash = useCallback(async (projectId: Id<"projects">, deletedBy?: string): Promise<Id<"deletedProjects">> => {
-    return await moveProjectToTrashMutation({ id: projectId, deletedBy });
+    try {
+      return await moveProjectToTrashMutation({ id: projectId, deletedBy });
+    } catch (error) {
+      console.error('Failed to move project to trash:', error);
+      throw new Error(`Unable to move project to trash: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [moveProjectToTrashMutation]);
 
   const restoreFile = useCallback(async (deletedFileId: Id<"deletedFiles">): Promise<Id<"files">> => {
-    return await restoreFileFromTrashMutation({ id: deletedFileId });
+    try {
+      return await restoreFileFromTrashMutation({ id: deletedFileId });
+    } catch (error) {
+      console.error('Failed to restore file from trash:', error);
+      throw new Error(`Unable to restore file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [restoreFileFromTrashMutation]);
 
   const restoreProject = useCallback(async (deletedProjectId: Id<"deletedProjects">): Promise<Id<"projects">> => {
-    return await restoreProjectFromTrashMutation({ id: deletedProjectId });
+    try {
+      return await restoreProjectFromTrashMutation({ id: deletedProjectId });
+    } catch (error) {
+      console.error('Failed to restore project from trash:', error);
+      throw new Error(`Unable to restore project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [restoreProjectFromTrashMutation]);
 
   const permanentlyDeleteFile = useCallback(async (deletedFileId: Id<"deletedFiles">): Promise<Id<"deletedFiles">> => {
-    return await permanentlyDeleteFileMutation({ id: deletedFileId });
+    try {
+      return await permanentlyDeleteFileMutation({ id: deletedFileId });
+    } catch (error) {
+      console.error('Failed to permanently delete file:', error);
+      throw new Error(`Unable to permanently delete file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [permanentlyDeleteFileMutation]);
 
   const permanentlyDeleteProject = useCallback(async (deletedProjectId: Id<"deletedProjects">): Promise<Id<"deletedProjects">> => {
-    return await permanentlyDeleteProjectMutation({ id: deletedProjectId });
+    try {
+      return await permanentlyDeleteProjectMutation({ id: deletedProjectId });
+    } catch (error) {
+      console.error('Failed to permanently delete project:', error);
+      throw new Error(`Unable to permanently delete project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [permanentlyDeleteProjectMutation]);
 
   const emptyTrash = useCallback(async (): Promise<{ deletedFiles: number; deletedProjects: number; timestamp: number }> => {
-    return await emptyTrashMutation({ confirmation: "EMPTY_TRASH" });
+    try {
+      return await emptyTrashMutation({ confirmation: "EMPTY_TRASH" });
+    } catch (error) {
+      console.error('Failed to empty trash:', error);
+      throw new Error(`Unable to empty trash: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }, [emptyTrashMutation]);
 
   // Utility functions
