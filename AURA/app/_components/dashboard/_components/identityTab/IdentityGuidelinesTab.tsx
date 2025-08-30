@@ -22,7 +22,7 @@ import {
   Shield,
   Bookmark,
   Globe,
-  Check
+  Save
 } from 'lucide-react';
 
 // Import form sections
@@ -58,6 +58,16 @@ export function IdentityGuidelinesTab({ isReadOnly = false }: IdentityGuidelines
   const [activeSection, setActiveSection] = useState('brand-overview');
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  
+  // Function to trigger save for the current section
+  const handleHeaderSave = () => {
+    console.log('🎯 Header save button clicked for section:', activeSection);
+    // This will trigger a custom event that the active section can listen for
+    const saveEvent = new CustomEvent('triggerSectionSave', {
+      detail: { section: activeSection }
+    });
+    window.dispatchEvent(saveEvent);
+  };
 
   // Initialize guidelines if they don't exist
   useEffect(() => {
@@ -163,9 +173,11 @@ export function IdentityGuidelinesTab({ isReadOnly = false }: IdentityGuidelines
       isReadOnly: isReadOnly,
       onSave: () => {
         setIsSaving(true);
-        // The hook will handle the save
-        setLastSaved(new Date());
-        setIsSaving(false);
+        // Update the save timestamp to indicate successful save
+        setTimeout(() => {
+          setLastSaved(new Date());
+          setIsSaving(false);
+        }, 500); // Small delay to show saving state
       }
     };
 
@@ -243,14 +255,16 @@ export function IdentityGuidelinesTab({ isReadOnly = false }: IdentityGuidelines
               {/* Save Button */}
               {!isReadOnly && (
                 <button
-                  onClick={() => {
-                    // Save current section
-                    setLastSaved(new Date());
-                  }}
-                  className="h-7 w-7 bg-[#252526] border border-[#454545] rounded text-[#858585] hover:text-[#cccccc] hover:border-[#007acc] transition-colors flex items-center justify-center"
-                  title="Save"
+                  onClick={handleHeaderSave}
+                  disabled={isSaving}
+                  className="h-7 w-7 bg-[#252526] border border-[#454545] rounded text-[#858585] hover:text-[#cccccc] hover:border-[#007acc] transition-colors flex items-center justify-center disabled:opacity-50"
+                  title="Save Current Section"
                 >
-                  <Check className="w-4 h-4" />
+                  {isSaving ? (
+                    <div className="w-3 h-3 border border-[#007acc] border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
                 </button>
               )}
               

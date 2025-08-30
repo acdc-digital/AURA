@@ -3,22 +3,22 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { IdentityGuidelines } from '@/lib/hooks';
-import { useOnboardingMapping } from '@/lib/hooks/useOnboardingMapping';
-import { OnboardingMappingCard } from '../OnboardingMappingCard';
-import { Building2, Target, Heart, Plus, X } from 'lucide-react';
+import { IdentityGuidelines, useIdentityGuidelines } from '@/lib/hooks';
+import { Building2, Target, Heart, Plus, X, Save } from 'lucide-react';
 
 interface CoreBrandSectionProps {
   guidelines: IdentityGuidelines;
   isReadOnly?: boolean;
+  onSave?: () => void;
 }
 
-export function CoreBrandSection({ guidelines, isReadOnly = false }: CoreBrandSectionProps) {
-  const { hasOnboardingData, canMapOnboarding } = useOnboardingMapping();
+export function CoreBrandSection({ guidelines, isReadOnly = false, onSave }: CoreBrandSectionProps) {
+  const { updateCoreBrand } = useIdentityGuidelines();
+  
   const [formData, setFormData] = useState({
     businessName: guidelines?.businessName || '',
     brandSlogan: guidelines?.brandSlogan || '',
@@ -29,9 +29,12 @@ export function CoreBrandSection({ guidelines, isReadOnly = false }: CoreBrandSe
   });
 
   const [newValue, setNewValue] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    setHasUnsavedChanges(true);
   };
 
   const handleAddValue = () => {
@@ -41,6 +44,7 @@ export function CoreBrandSection({ guidelines, isReadOnly = false }: CoreBrandSe
         coreValues: [...prev.coreValues, newValue.trim()]
       }));
       setNewValue('');
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -49,20 +53,50 @@ export function CoreBrandSection({ guidelines, isReadOnly = false }: CoreBrandSe
       ...prev,
       coreValues: prev.coreValues.filter(value => value !== valueToRemove)
     }));
+    setHasUnsavedChanges(true);
   };
+
+  const handleSave = useCallback(async () => {
+    if (!hasUnsavedChanges || isReadOnly) {
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      await updateCoreBrand({
+        businessName: formData.businessName,
+        brandSlogan: formData.brandSlogan,
+        businessDescription: formData.businessDescription,
+        missionStatement: formData.missionStatement,
+        visionStatement: formData.visionStatement,
+        coreValues: formData.coreValues,
+      });
+      setHasUnsavedChanges(false);
+      onSave?.();
+    } catch (error) {
+      console.error('❌ Failed to save core brand information:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [hasUnsavedChanges, isReadOnly, formData, updateCoreBrand, onSave]);
+
+  // Listen for header save trigger
+  useEffect(() => {
+    const handleSaveTrigger = (event: CustomEvent) => {
+      if (event.detail.section === 'brand-overview' && hasUnsavedChanges) {
+        handleSave();
+      }
+    };
+
+    window.addEventListener('triggerSectionSave', handleSaveTrigger as EventListener);
+
+    return () => {
+      window.removeEventListener('triggerSectionSave', handleSaveTrigger as EventListener);
+    };
+  }, [hasUnsavedChanges, handleSave]); // Include handleSave in dependencies
 
   return (
     <div className="space-y-8">
-      {/* Onboarding Mapping Card - Show only if we have onboarding data and it's not readonly */}
-      {!isReadOnly && (hasOnboardingData || canMapOnboarding) && (
-        <OnboardingMappingCard
-          onMappingComplete={(guidelinesId) => {
-            // Optionally refresh the component or show success message
-            console.log('Mapping completed for guidelines:', guidelinesId);
-          }}
-        />
-      )}
-      
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Basic Information */}
         <div className="space-y-6">
@@ -233,6 +267,20 @@ export function CoreBrandSection({ guidelines, isReadOnly = false }: CoreBrandSe
           </div>
         </div>
       </div>
+
+      {/* Save Button - Only show if there are unsaved changes and not read-only */}
+      {!isReadOnly && hasUnsavedChanges && (
+        <div className="flex justify-end pt-6 border-t border-[#454545]">
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="bg-[#007acc] hover:bg-[#005a9e] text-white flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

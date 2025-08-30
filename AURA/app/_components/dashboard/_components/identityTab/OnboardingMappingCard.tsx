@@ -32,7 +32,6 @@ interface OnboardingMappingCardProps {
 export function OnboardingMappingCard({ onMappingComplete }: OnboardingMappingCardProps) {
   const { 
     hasOnboardingData, 
-    canMapOnboarding, 
     applyOnboardingToGuidelines, 
     getPreviewMapping 
   } = useOnboardingMapping();
@@ -93,31 +92,7 @@ export function OnboardingMappingCard({ onMappingComplete }: OnboardingMappingCa
     );
   }
   
-  if (!canMapOnboarding) {
-    return (
-      <div className="bg-[#2d2d30] border border-[#454545] rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <AlertCircle className="w-5 h-5 text-[#fbbf24]" />
-          <h3 className="text-lg font-semibold text-[#cccccc]">Onboarding Data Incomplete</h3>
-        </div>
-        <p className="text-[#858585] mb-4">
-          Your onboarding data is missing some required information needed for identity guidelines.
-        </p>
-        {preview?.validation.missingFields && (
-          <div className="space-y-2 mb-4">
-            <span className="text-sm font-medium text-[#cccccc]">Missing Fields:</span>
-            <div className="flex flex-wrap gap-2">
-              {preview.validation.missingFields.map((field) => (
-                <Badge key={field} variant="outline" className="bg-[#1e1e1e] border-red-500/30 text-red-400">
-                  {field}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
+
   
   return (
     <div className="bg-[#2d2d30] border border-[#454545] rounded-lg p-6 space-y-4">
