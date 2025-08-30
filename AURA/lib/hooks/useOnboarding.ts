@@ -44,6 +44,7 @@ export function useOnboarding() {
     completionPercentage: onboardingProgress?.completionPercentage || 0,
     isCompleted: onboardingProgress?.isCompleted || false,
     isSkipped: onboardingProgress?.isSkipped || false,
+    hasStartedEngaging: onboardingProgress?.hasStartedEngaging || false,
     responses: onboardingState?.responses || {},
     
     // Actions

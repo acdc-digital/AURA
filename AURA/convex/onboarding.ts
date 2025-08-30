@@ -54,6 +54,7 @@ export const getOnboardingProgress = query({
       completionPercentage: onboarding.completionPercentage,
       isCompleted: onboarding.isCompleted,
       isSkipped: onboarding.isSkipped,
+      hasStartedEngaging: onboarding.hasStartedEngaging,
       responses: onboarding.responses,
     };
   },
@@ -120,6 +121,9 @@ export const updateOnboardingResponse = mutation({
       Math.round((currentStepIndex / (stepOrder.length - 1)) * 100);
 
     if (!onboarding) {
+      // Determine if this is the start of engagement (first actual response, not skip/welcome/completion_pending)
+      const isStartingEngagement = step !== "welcome" && step !== "skipped" && step !== "completion_pending" && step !== "completed";
+      
       // Create new onboarding record
       const onboardingId = await ctx.db.insert("onboardingResponses", {
         userId,
@@ -139,6 +143,7 @@ export const updateOnboardingResponse = mutation({
         completionPercentage,
         isCompleted: step === "completed",
         isSkipped: step === "skipped",
+        hasStartedEngaging: isStartingEngagement,
         createdAt: now,
         updatedAt: now,
         ...(step === "completed" && { completedAt: now }),
@@ -237,12 +242,17 @@ export const updateOnboardingResponse = mutation({
           break;
       }
 
+      // Determine if this is the start of engagement (first actual response, not skip/welcome/completion_pending)
+      const isStartingEngagement = step !== "welcome" && step !== "skipped" && step !== "completion_pending" && step !== "completed";
+      const shouldSetEngagementFlag = isStartingEngagement && !onboarding.hasStartedEngaging;
+
       await ctx.db.patch(onboarding._id, {
         currentStep: step,
         responses: updatedResponses,
         completionPercentage,
         isCompleted: step === "completed",
         isSkipped: step === "skipped",
+        ...(shouldSetEngagementFlag && { hasStartedEngaging: true }),
         updatedAt: now,
         ...(step === "completed" && { completedAt: now }),
       });
@@ -301,6 +311,7 @@ export const handleOnboardingMessage = action({
       completionPercentage: number;
       isCompleted?: boolean;
       isSkipped?: boolean;
+      hasStartedEngaging?: boolean;
       responses?: {
         brandName?: string;
         brandDescription?: string;
@@ -331,6 +342,24 @@ export const handleOnboardingMessage = action({
       sessionId,
       userId: actualUserId,
     });
+
+    // Mark that the user has started engaging (submitted a message instead of skipping)
+    // This will disable the skip button going forward
+    if (!currentState.hasStartedEngaging) {
+      console.log('🎯 User has started engaging with onboarding, marking engagement flag');
+      try {
+        // Use a step that represents engagement without changing the actual step
+        const engagementStep = currentState.currentStep === "welcome" ? "brand_name" : currentState.currentStep;
+        await ctx.runMutation(api.onboarding.updateOnboardingResponse, {
+          userId: actualUserId,
+          sessionId,
+          step: engagementStep as "brand_name" | "brand_description" | "brand_industry" | "target_audience" | "brand_personality" | "brand_values" | "brand_goals" | "color_preferences" | "style_preferences" | "completion_pending" | "completed" | "skipped" | "welcome",
+          responseData: null, // No specific data, just marking engagement
+        });
+      } catch (error) {
+        console.error('Failed to mark engagement flag:', error);
+      }
+    }
 
     // Analyze user message to extract ALL relevant information (not just current step)
     const extractedInfo = await extractInformationFromMessage(message);
@@ -365,7 +394,7 @@ export const handleOnboardingMessage = action({
     });
     
     const assistantMessages = sessionMessages.filter(msg => msg.role === "assistant").length;
-    const MAX_ONBOARDING_QUESTIONS = 8; // Comprehensive brand identity collection
+    const MAX_ONBOARDING_QUESTIONS = 8; // Streamlined brand identity collection - reduced from 8 to 3
     
     // Check for completion signals - expanded list with more common phrases
     const completionPhrases = [
@@ -380,8 +409,8 @@ export const handleOnboardingMessage = action({
       message.toLowerCase().includes(phrase)
     );
     
-    // 3. Early completion only for very clear completion signals, not short responses
-    const hasMinimumQuestions = assistantMessages >= 5; // Require at least 5 questions before early completion
+    // Early completion only for very clear completion signals, not short responses
+    const hasMinimumQuestions = assistantMessages >= 2; // Require at least 2 questions before early completion - reduced from 5 to 2
     const shouldCompleteEarly = hasMinimumQuestions && hasCompletionSignal; // Remove short response logic
     
     console.log(`🔍 Onboarding check: ${assistantMessages} questions asked (max: ${MAX_ONBOARDING_QUESTIONS}), completion signal: ${hasCompletionSignal}, early completion: ${shouldCompleteEarly}, message: "${message}"`);
@@ -947,6 +976,23 @@ function extractBrandValues(message: string): string[] {
 function extractBrandName(message: string): string | null {
   const trimmedMessage = message.trim();
   
+  // Skip extraction if message looks like it's answering about industry/category
+  const industryIndicators = [
+    'its', 'it\'s', 'that\'s', 'we are', 'we\'re', 'i would say', 'i think',
+    'martech', 'fintech', 'edtech', 'adtech', 'healthtech', 'proptech',
+    'marketing technology', 'financial technology', 'educational technology'
+  ];
+  
+  const lowerMessage = trimmedMessage.toLowerCase();
+  const hasIndustryContext = industryIndicators.some(indicator =>
+    lowerMessage.includes(indicator)
+  );
+  
+  // If this looks like an industry/classification response, don't extract brand name
+  if (hasIndustryContext) {
+    return null;
+  }
+  
   // Look for explicit brand name patterns first
   const brandNamePatterns = [
     /(?:product name is|brand name is|called|named|it's called)\s+([A-Za-z][A-Za-z0-9\s]{1,30})/i,
@@ -958,11 +1004,13 @@ function extractBrandName(message: string): string | null {
     const match = trimmedMessage.match(pattern);
     if (match && match[1]) {
       const extractedName = match[1].trim();
-      // Validate it looks like a brand name (not a description)
+      // Validate it looks like a brand name (not a description or industry term)
       if (extractedName.length <= 30 &&
           !extractedName.toLowerCase().includes('social media') &&
           !extractedName.toLowerCase().includes('broadcasting') &&
-          !extractedName.toLowerCase().includes('platform')) {
+          !extractedName.toLowerCase().includes('platform') &&
+          !extractedName.toLowerCase().includes('tech') &&
+          !extractedName.toLowerCase().includes('marketing')) {
         return extractedName;
       }
     }
@@ -976,17 +1024,20 @@ function extractBrandName(message: string): string | null {
       !trimmedMessage.toLowerCase().includes('the') &&
       !trimmedMessage.toLowerCase().includes('social') &&
       !trimmedMessage.toLowerCase().includes('platform') &&
-      !trimmedMessage.toLowerCase().includes('broadcasting')) {
+      !trimmedMessage.toLowerCase().includes('broadcasting') &&
+      !hasIndustryContext) {
     return trimmedMessage;
   }
 
   // Extract from longer descriptions - look for capitalized words that might be brand names
+  // But be more conservative and skip if context suggests it's not a brand name
   const words = trimmedMessage.split(/\s+/);
   for (const word of words) {
     if (word.length >= 3 &&
         word.length <= 15 &&
         /^[A-Z][a-z]+$/.test(word) &&
-        !['Product', 'Brand', 'Company', 'Service', 'Platform', 'System', 'Social', 'Media'].includes(word)) {
+        !['Product', 'Brand', 'Company', 'Service', 'Platform', 'System', 'Social', 'Media', 'MarTech', 'FinTech', 'EdTech', 'AdTech'].includes(word) &&
+        !hasIndustryContext) {
       return word;
     }
   }

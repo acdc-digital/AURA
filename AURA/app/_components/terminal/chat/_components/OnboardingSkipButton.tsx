@@ -13,21 +13,28 @@ import { Id } from "@/convex/_generated/dataModel";
 
 interface OnboardingSkipButtonProps {
   messageId: Id<"chatMessages">;
+  isDisabled?: boolean;
   onSkipped?: () => void;
 }
 
 export function OnboardingSkipButton({ 
   messageId, 
+  isDisabled = false,
   onSkipped 
 }: OnboardingSkipButtonProps) {
-  const { handleSkipOnboarding } = useOnboarding();
+  const { handleSkipOnboarding, hasStartedEngaging = false } = useOnboarding();
   const { user } = useUser();
   const updateComponent = useMutation(api.chat.updateInteractiveComponent);
   
   // Get the message to extract sessionId
   const message = useQuery(api.chat.getMessage, { messageId });
 
+  // Determine if button should be disabled: either explicitly disabled or user has started engaging
+  const shouldDisable = isDisabled || hasStartedEngaging;
+
   const handleSkip = async () => {
+    if (shouldDisable) return; // Don't handle clicks when disabled
+    
     try {
       console.log("🎯 Skip button clicked, calling handleSkipOnboarding...");
       if (!message?.sessionId) {
@@ -73,12 +80,17 @@ export function OnboardingSkipButton({
     <div className="mt-3 max-w-xs">
       <Button
         onClick={handleSkip}
+        disabled={shouldDisable}
         variant="outline"
         size="sm"
-        className="bg-[#1e1e1e] border-[#2d2d2d] text-[#cccccc] hover:bg-[#2d2d2d] hover:text-white text-xs px-2 py-1 h-6"
+        className={`bg-[#1e1e1e] border-[#2d2d2d] text-xs px-2 py-1 h-6 ${
+          shouldDisable
+            ? 'text-[#666666] cursor-not-allowed opacity-50'
+            : 'text-[#cccccc] hover:bg-[#2d2d2d] hover:text-white'
+        }`}
       >
         <ArrowRight className="w-3 h-3 mr-1.5" />
-        Skip
+        {hasStartedEngaging ? 'Onboarding Started' : shouldDisable ? 'Skipped' : 'Skip'}
       </Button>
     </div>
   );

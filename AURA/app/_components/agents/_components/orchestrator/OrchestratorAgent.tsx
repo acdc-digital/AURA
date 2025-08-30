@@ -44,6 +44,17 @@ export const OrchestratorAgent: FC<OrchestratorAgentProps> = ({
     sessionId: currentSessionId,
   });
   
+  // Debug logging for messages
+  useEffect(() => {
+    console.log("🔍 OrchestratorAgent Debug:", {
+      currentSessionId,
+      messagesData,
+      messagesLength: messagesData?.length || 0,
+      isAuthenticated,
+      user: user?._id
+    });
+  }, [messagesData, currentSessionId, isAuthenticated, user?._id]);
+  
   // Memoize messages to prevent unnecessary re-renders
   const messages = useMemo(() => {
     const msgs = messagesData ?? [];
@@ -76,10 +87,17 @@ export const OrchestratorAgent: FC<OrchestratorAgentProps> = ({
     
     if (!inputValue.trim() || isSubmitting) return;
 
+    console.log("📤 Submitting message:", {
+      inputValue: inputValue.trim(),
+      currentSessionId,
+      userId: user?._id
+    });
+
     setIsSubmitting(true);
 
     try {
       // Add user message to chat
+      console.log("📝 Adding user message...");
       await addMessage({
         role: "user",
         content: inputValue.trim(),
@@ -91,13 +109,16 @@ export const OrchestratorAgent: FC<OrchestratorAgentProps> = ({
       setInputValue("");
 
       // Send to orchestrator for processing
+      console.log("🤖 Sending to orchestrator...");
       await sendToOrchestrator({
         message: inputValue.trim(),
         sessionId: currentSessionId,
         userId: user?._id,
       });
+      
+      console.log("✅ Message sent successfully");
     } catch (error) {
-      console.error("Failed to send message to orchestrator:", error);
+      console.error("❌ Failed to send message to orchestrator:", error);
       
       // Add error message to chat
       await addMessage({

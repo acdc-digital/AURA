@@ -94,18 +94,38 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
     isVoiceMode,
     setProcessing,
     isProcessing,
+    isChatMode,
+    setChatMode,
   } = useTerminalStore();
   
   const terminal = terminals.get(terminalId) || terminalSession;
   
   // Input state
   const [input, setInput] = useState("");
-  const [chatMode, setChatMode] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'chat' | 'sessions' | 'agents' | 'extensions'>('chat');
   const [hasInitializedOnboarding, setHasInitializedOnboarding] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const welcomeMessageSendingRef = useRef(false);
+
+  // Auto-enter chat mode if there are existing messages in the session
+  useEffect(() => {
+    if (rawMessages && rawMessages.length > 0 && !isChatMode) {
+      console.log("🚀 Auto-entering chat mode - existing messages found:", rawMessages.length);
+      setChatMode(true);
+    }
+  }, [rawMessages, isChatMode, setChatMode]);
+
+  // Debug effect for component lifecycle
+  useEffect(() => {
+    console.log("🏗️ AdvancedTerminalDisplay mounted/updated:", {
+      terminalId,
+      activeSessionId,
+      messagesCount: rawMessages?.length || 0,
+      isChatMode,
+      needsOnboarding
+    });
+  }, [terminalId, activeSessionId, rawMessages?.length, isChatMode, needsOnboarding]);
 
   // Reset onboarding initialization when onboarding status changes
   useEffect(() => {
@@ -445,8 +465,8 @@ export function AdvancedTerminalDisplay({ terminalId }: AdvancedTerminalDisplayP
   // Auto-enter chat mode for onboarding users or if terminal title is "Chat"
   useEffect(() => {
     const shouldEnterChatMode = (
-      (terminal?.title === "Chat" && !chatMode) ||
-      (needsOnboarding && !chatMode && activeSessionId && !onboardingLoading)
+      (terminal?.title === "Chat" && !isChatMode) ||
+      (needsOnboarding && !isChatMode && activeSessionId && !onboardingLoading)
     ) && isAuthenticated;
 
     if (shouldEnterChatMode) {
@@ -475,7 +495,7 @@ Type 'exit' or 'quit' to return to terminal mode.`;
       // Add welcome message to buffer (for onboarding, this is just a status message)
       addToBuffer(welcomeMessage);
     }
-  }, [terminal?.title, chatMode, isAuthenticated, onboardingLoading, needsOnboarding, activeSessionId, sessions, addToBuffer, terminalId, setChatMode]);
+  }, [terminal?.title, isChatMode, isAuthenticated, onboardingLoading, needsOnboarding, activeSessionId, sessions, addToBuffer, terminalId, setChatMode]);
 
   // Handle onboarding welcome message - send to database when conditions are met
   useEffect(() => {
@@ -506,13 +526,16 @@ Type 'exit' or 'quit' to return to terminal mode.`;
   const processCommand = useCallback(async (command: string) => {
     if (!terminal) return;
     
+    console.log("🔧 processCommand called:", { command, isChatMode, needsOnboarding, activeSessionId });
+    
     const startTime = Date.now();
     
     try {
       setProcessing(true);
       
       // Handle chat mode
-      if (chatMode) {
+      if (isChatMode) {
+        console.log("💬 Processing in chat mode");
         if (command.toLowerCase() === "exit" || command.toLowerCase() === "quit") {
           setChatMode(false);
           addToBuffer("Exited chat mode. Back to terminal.");
@@ -636,7 +659,7 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
     } finally {
       setProcessing(false);
     }
-  }, [terminal, terminalId, commandHistory, addToBuffer, clearBuffer, setProcessing, saveCommand, isAuthenticated, chatMode, sendMessage, sendOnboardingMessage, needsOnboarding, setChatMode, activeSessionId]);
+  }, [terminal, terminalId, commandHistory, addToBuffer, clearBuffer, setProcessing, saveCommand, isAuthenticated, isChatMode, sendMessage, sendOnboardingMessage, needsOnboarding, setChatMode, activeSessionId]);
 
   // Enhanced input submit handler
   const handleEnhancedSubmit = useCallback(async (messageContent: string) => {
@@ -738,7 +761,7 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
             ref={outputRef}
             className="flex-1 px-3 py-3 overflow-y-auto font-mono text-xs leading-relaxed scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent min-h-0"
           >
-            {chatMode ? (
+            {isChatMode ? (
               // Show session messages when in chat mode
               <>
                 {messagesLoading ? (
@@ -806,7 +829,7 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
                 value={input}
                 onChange={setInput}
                 onSubmit={handleEnhancedSubmit}
-                placeholder={chatMode ? "Ask anything... (Shift+Enter for new line)" : "Type a command... (Shift+Enter for new line)"}
+                placeholder={isChatMode ? "Ask anything... (Shift+Enter for new line)" : "Type a command... (Shift+Enter for new line)"}
                 disabled={isProcessing}
                 isLoading={isProcessing}
                 showToolbar={false}
@@ -831,7 +854,7 @@ Orchestrator is ready to help with development tasks, planning, and guidance.`;
             <div className="flex items-center space-x-2">
               {isVoiceMode ? (
                 <span className="text-[#22c55e]">Voice Mode</span>
-              ) : chatMode ? (
+              ) : isChatMode ? (
                 <span className="text-[#0ea5e9]">Chat Mode</span>
               ) : (
                 <>

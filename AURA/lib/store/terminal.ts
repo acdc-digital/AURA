@@ -25,6 +25,7 @@ interface TerminalUIState {
 
   // Mode states
   isVoiceMode: boolean; // Voice input mode
+  isChatMode: boolean; // Chat mode state (persisted across component mounts)
 
   // UI alerts
   alerts: Alert[];
@@ -39,6 +40,8 @@ interface TerminalUIState {
   // Actions - Mode management
   setVoiceMode: (enabled: boolean) => void;
   toggleVoiceMode: () => void;
+  setChatMode: (enabled: boolean) => void;
+  toggleChatMode: () => void;
 
   // Actions - UI state
   setActiveTerminal: (id: string) => void;
@@ -65,6 +68,7 @@ export const useTerminalStore = create<TerminalUIState>()(
 
       // Mode states
       isVoiceMode: false,
+      isChatMode: false,
 
       // Alerts (UI only)
       alerts: [],
@@ -91,6 +95,14 @@ export const useTerminalStore = create<TerminalUIState>()(
       toggleVoiceMode: () =>
         set((state: TerminalUIState) => ({
           isVoiceMode: !state.isVoiceMode
+        })),
+
+      // Chat mode management actions
+      setChatMode: (enabled: boolean) => set({ isChatMode: enabled }),
+
+      toggleChatMode: () =>
+        set((state: TerminalUIState) => ({
+          isChatMode: !state.isChatMode
         })),
 
       // UI state actions

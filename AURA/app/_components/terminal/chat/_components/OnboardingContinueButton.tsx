@@ -13,11 +13,13 @@ import { Id } from "@/convex/_generated/dataModel";
 
 interface OnboardingContinueButtonProps {
   messageId: Id<"chatMessages">;
+  isDisabled?: boolean;
   onContinued?: () => void;
 }
 
 export function OnboardingContinueButton({ 
   messageId, 
+  isDisabled = false,
   onContinued 
 }: OnboardingContinueButtonProps) {
   const { handleContinueOnboarding } = useOnboarding();
@@ -28,6 +30,8 @@ export function OnboardingContinueButton({
   const message = useQuery(api.chat.getMessage, { messageId });
 
   const handleContinue = async () => {
+    if (isDisabled) return; // Don't handle clicks when disabled
+    
     try {
       if (!message?.sessionId) {
         console.error("No session ID found for message");
@@ -73,12 +77,17 @@ export function OnboardingContinueButton({
     <div className="mt-3 max-w-xs">
       <Button
         onClick={handleContinue}
-        variant="default"
+        disabled={isDisabled}
+        variant="outline"
         size="sm"
-        className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 h-6"
+        className={`bg-[#1e1e1e] border-[#2d2d2d] text-xs px-2 py-1 h-6 ${
+          isDisabled
+            ? 'text-[#666666] cursor-not-allowed opacity-50'
+            : 'text-[#cccccc] hover:bg-[#2d2d2d] hover:text-white'
+        }`}
       >
         <ArrowRight className="w-3 h-3 mr-1.5" />
-        Continue
+        {isDisabled ? 'Continued' : 'Continue'}
       </Button>
     </div>
   );

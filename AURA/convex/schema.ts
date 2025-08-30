@@ -867,6 +867,7 @@ export default defineSchema({
     completionPercentage: v.number(), // 0-100 based on completed steps
     isCompleted: v.boolean(),
     isSkipped: v.boolean(),
+    hasStartedEngaging: v.optional(v.boolean()), // Flag to track when user submits first response (prevents skipping after starting)
     
     // Generated brand guidelines reference (if completed)
     generatedGuidelinesId: v.optional(v.id("identityGuidelines")),

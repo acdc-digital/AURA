@@ -138,11 +138,12 @@ export const TerminalMessage: FC<TerminalMessageProps> = ({
                   {formatMessage(message)}
                 </TypewriterResponse>
                 
-                {!isStreaming && message.interactiveComponent && message.interactiveComponent.status === "pending" && (
+                {!isStreaming && message.interactiveComponent && (
                   <div className="mt-3">
                     {message.interactiveComponent.type === "onboarding_skip_button" && (
                       <OnboardingSkipButton
                         messageId={message._id}
+                        isDisabled={message.interactiveComponent.status !== "pending"}
                         onSkipped={() => {
                           console.log("👋 Skip button clicked");
                         }}
@@ -151,6 +152,7 @@ export const TerminalMessage: FC<TerminalMessageProps> = ({
                     {message.interactiveComponent?.type === "onboarding_continue_button" && (
                       <OnboardingContinueButton
                         messageId={message._id}
+                        isDisabled={message.interactiveComponent.status !== "pending"}
                         onContinued={() => {
                           console.log("🎯 Continue button clicked");
                         }}

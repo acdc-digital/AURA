@@ -19,6 +19,14 @@ export function useSessionMessages() {
       : "skip"
   );
   
+  // Debug logging
+  console.log("📧 useSessionMessages Debug:", {
+    activeSessionId,
+    isAuthenticated,
+    messages: messages?.length || 0,
+    querySkipped: !activeSessionId || !isAuthenticated
+  });
+  
   // Mutation to add new message
   const addMessage = useMutation(api.chat.addMessage);
   
