@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { IdentityGuidelines } from '@/lib/hooks';
+import { useOnboardingMapping } from '@/lib/hooks/useOnboardingMapping';
+import { OnboardingMappingCard } from '../OnboardingMappingCard';
 import { Building2, Target, Heart, Plus, X } from 'lucide-react';
 
 interface CoreBrandSectionProps {
@@ -16,6 +18,7 @@ interface CoreBrandSectionProps {
 }
 
 export function CoreBrandSection({ guidelines, isReadOnly = false }: CoreBrandSectionProps) {
+  const { hasOnboardingData, canMapOnboarding } = useOnboardingMapping();
   const [formData, setFormData] = useState({
     businessName: guidelines?.businessName || '',
     brandSlogan: guidelines?.brandSlogan || '',
@@ -50,6 +53,16 @@ export function CoreBrandSection({ guidelines, isReadOnly = false }: CoreBrandSe
 
   return (
     <div className="space-y-8">
+      {/* Onboarding Mapping Card - Show only if we have onboarding data and it's not readonly */}
+      {!isReadOnly && (hasOnboardingData || canMapOnboarding) && (
+        <OnboardingMappingCard
+          onMappingComplete={(guidelinesId) => {
+            // Optionally refresh the component or show success message
+            console.log('Mapping completed for guidelines:', guidelinesId);
+          }}
+        />
+      )}
+      
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Basic Information */}
         <div className="space-y-6">

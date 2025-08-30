@@ -159,6 +159,35 @@ export const update = mutation({
       clearSpace: v.optional(v.string()),
     })),
     
+    // Visual Style Guidelines
+    visualStyle: v.optional(v.object({
+      photographyStyle: v.optional(v.string()),
+      illustrationStyle: v.optional(v.string()),
+      iconographyStyle: v.optional(v.string()),
+      dataVisualizationStyle: v.optional(v.string()),
+      videoAnimationStyle: v.optional(v.string()),
+    })),
+    
+    // Application Guidelines
+    applicationGuidelines: v.optional(v.object({
+      websiteGuidelines: v.optional(v.string()),
+      marketingMaterials: v.optional(v.string()),
+      stationeryGuidelines: v.optional(v.string()),
+      merchandiseGuidelines: v.optional(v.string()),
+      signageGuidelines: v.optional(v.string()),
+      templates: v.optional(v.array(v.string())),
+    })),
+    
+    // Legal Information
+    legalInformation: v.optional(v.object({
+      trademarkInfo: v.optional(v.string()),
+      copyrightInfo: v.optional(v.string()),
+      usageRights: v.optional(v.string()),
+      disclaimers: v.optional(v.array(v.string())),
+      brandContact: v.optional(v.string()),
+      assetLibrary: v.optional(v.string()),
+    })),
+    
     // Industry & Competition
     industryContext: v.optional(v.object({
       industry: v.optional(v.string()),

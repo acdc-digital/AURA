@@ -11,6 +11,7 @@ export { useSessionMessages } from "./useSessionMessages";
 export { useSessionTokens } from "./useSessionTokens";
 export { useIdentityGuidelines } from "./useIdentityGuidelines";
 export { useOnboarding } from "./useOnboarding";
+export { useOnboardingMapping } from "./useOnboardingMapping";
 export {
   useTerminal,
   useTerminalHistory,

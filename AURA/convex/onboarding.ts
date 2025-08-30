@@ -60,6 +60,36 @@ export const getOnboardingProgress = query({
   },
 });
 
+// Query to get completed onboarding data for current authenticated user
+export const getCompletedOnboarding = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    // Get user record
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!user) {
+      return null;
+    }
+
+    // Get completed onboarding for this user
+    const onboarding = await ctx.db
+      .query("onboardingResponses")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .filter((q) => q.eq(q.field("isCompleted"), true))
+      .order("desc")
+      .first();
+
+    return onboarding;
+  },
+});
+
 // Mutation to initialize or update onboarding responses
 export const updateOnboardingResponse = mutation({
   args: {
@@ -1244,11 +1274,32 @@ export const generateBrandGuidelines = action({
         },
         brandPersonality: {
           traits: responses.brandPersonality || [],
-          toneOfVoice: responses.stylePreferences?.visualStyle || "modern",
+          toneOfVoice: responses.brandPersonality?.length
+            ? `${responses.brandPersonality.slice(0, 3).join(', ')} tone`
+            : undefined,
         },
-        colorPalette: {
-          primaryColors: responses.colorPreferences?.preferredColors || [],
+        colorPalette: responses.colorPreferences?.preferredColors?.length ? {
+          primaryColors: responses.colorPreferences.preferredColors,
+        } : undefined,
+        typography: responses.stylePreferences?.typographyStyle ? {
+          primaryFont: responses.stylePreferences.typographyStyle === 'sans-serif'
+            ? 'Inter, system-ui, sans-serif'
+            : responses.stylePreferences.typographyStyle === 'serif'
+            ? 'Georgia, Times, serif'
+            : undefined,
+        } : undefined,
+        visualStyle: responses.stylePreferences ? {
+          photographyStyle: responses.stylePreferences.imageStyle === 'photography'
+            ? `${responses.stylePreferences.visualStyle || 'professional'} photography style`
+            : undefined,
+          illustrationStyle: responses.stylePreferences.imageStyle === 'illustration'
+            ? `${responses.stylePreferences.visualStyle || 'modern'} illustration style`
+            : undefined,
+        } : undefined,
+        industryContext: {
+          industry: responses.brandIndustry || "",
         },
+        status: "draft" as const,
       });
 
       // Create initial project
@@ -1279,6 +1330,101 @@ export const generateBrandGuidelines = action({
       return {
         success: false,
         error: "Failed to generate brand guidelines",
+      };
+    }
+  },
+});
+
+// Action to apply onboarding data to identity guidelines
+export const applyOnboardingToGuidelines = action({
+  args: {},
+  handler: async (ctx): Promise<{
+    success: boolean;
+    guidelinesId?: string;
+    error?: string;
+  }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return {
+        success: false,
+        error: "Not authenticated",
+      };
+    }
+
+    // Get user record
+    const user = await ctx.runQuery(api.users.getCurrentUser);
+    if (!user) {
+      return {
+        success: false,
+        error: "User not found",
+      };
+    }
+
+    // Get completed onboarding
+    const onboarding = await ctx.runQuery(api.onboarding.getCompletedOnboarding);
+    if (!onboarding) {
+      return {
+        success: false,
+        error: "No completed onboarding found",
+      };
+    }
+
+    const responses = onboarding.responses;
+
+    try {
+      // First ensure guidelines exist for the user
+      const guidelinesId = await ctx.runMutation(api.identityGuidelines.ensureGuidelines, {});
+
+      // Apply the same transformation as the generateBrandGuidelines function
+      await ctx.runMutation(api.identityGuidelines.update, {
+        id: guidelinesId,
+        businessName: responses.brandName || "Your Brand",
+        businessDescription: responses.brandDescription || "",
+        missionStatement: responses.brandGoals?.keyObjectives?.join(", ") || "",
+        visionStatement: responses.brandGoals?.longTerm || "",
+        coreValues: responses.brandValues || [],
+        targetAudience: {
+          primaryDemographic: responses.targetAudience?.primaryAudience || "",
+        },
+        brandPersonality: {
+          traits: responses.brandPersonality || [],
+          toneOfVoice: responses.brandPersonality?.length
+            ? `${responses.brandPersonality.slice(0, 3).join(', ')} tone`
+            : undefined,
+        },
+        colorPalette: responses.colorPreferences?.preferredColors?.length ? {
+          primaryColors: responses.colorPreferences.preferredColors,
+        } : undefined,
+        typography: responses.stylePreferences?.typographyStyle ? {
+          primaryFont: responses.stylePreferences.typographyStyle === 'sans-serif'
+            ? 'Inter, system-ui, sans-serif'
+            : responses.stylePreferences.typographyStyle === 'serif'
+            ? 'Georgia, Times, serif'
+            : undefined,
+        } : undefined,
+        visualStyle: responses.stylePreferences ? {
+          photographyStyle: responses.stylePreferences.imageStyle === 'photography'
+            ? `${responses.stylePreferences.visualStyle || 'professional'} photography style`
+            : undefined,
+          illustrationStyle: responses.stylePreferences.imageStyle === 'illustration'
+            ? `${responses.stylePreferences.visualStyle || 'modern'} illustration style`
+            : undefined,
+        } : undefined,
+        industryContext: {
+          industry: responses.brandIndustry || "",
+        },
+        status: "draft" as const,
+      });
+
+      return {
+        success: true,
+        guidelinesId: guidelinesId.toString(),
+      };
+    } catch (error) {
+      console.error("Error applying onboarding to guidelines:", error);
+      return {
+        success: false,
+        error: "Failed to apply onboarding data",
       };
     }
   },
@@ -1383,19 +1529,77 @@ export const handleContinueOnboarding = action({
     }
 
     try {
-      // Send orchestrator welcome message to the SAME session (no new session needed)
+      console.log("🎯 handleContinueOnboarding: Starting continue process for user:", userId);
+
+      // Step 0: Mark onboarding as fully completed (100%) and set isCompleted: true
+      console.log("📝 Step 0: Finalizing onboarding completion status...");
+      console.log("   - Current state likely at 95% (completion_pending)");
+      console.log("   - Updating to 100% completion with step: 'completed'");
+      
+      await ctx.runMutation(api.onboarding.updateOnboardingResponse, {
+        userId,
+        sessionId,
+        step: "completed",
+        responseData: {
+          finalizedAt: Date.now(),
+          completedViaButton: true,
+        },
+      });
+      
+      console.log("✅ Onboarding marked as fully completed:");
+      console.log("   - completionPercentage: 100%");
+      console.log("   - isCompleted: true");
+      console.log("   - currentStep: 'completed'");
+      console.log("   - completedAt: set to current timestamp");
+
+      // Step 0.5: Verify completion worked by checking the updated state
+      console.log("🔍 Step 0.5: Verifying completion update...");
+      const completedOnboarding = await ctx.runQuery(api.onboarding.getCompletedOnboarding);
+      if (!completedOnboarding) {
+        console.error("❌ CRITICAL: Onboarding completion verification failed - still not marked as completed!");
+        console.error("   This means the updateOnboardingResponse didn't work as expected");
+        return {
+          success: false,
+          error: "Failed to finalize onboarding completion state",
+        };
+      }
+      console.log("✅ Completion verified - onboarding is now fully completed and accessible");
+      console.log(`   - Completion percentage: ${completedOnboarding.completionPercentage}%`);
+      console.log(`   - Is completed: ${completedOnboarding.isCompleted}`);
+
+      // Step 1: Apply onboarding responses to identity guidelines
+      console.log("📋 Step 1: Applying onboarding data to identity guidelines...");
+      const mappingResult = await ctx.runAction(api.onboarding.applyOnboardingToGuidelines, {});
+      
+      if (!mappingResult.success) {
+        console.error("❌ Failed to apply onboarding to guidelines:", mappingResult.error);
+        // Continue anyway - this isn't a critical failure
+      } else {
+        console.log("✅ Successfully applied onboarding data to identity guidelines:", mappingResult.guidelinesId);
+      }
+
+      // Step 2: Update user status to completed
+      console.log("👤 Step 2: Updating user onboarding status to completed...");
+      await ctx.runMutation(api.users.updateOnboardingStatus, {
+        status: "completed",
+      });
+
+      // Step 3: Send orchestrator welcome message to the SAME session (no new session needed)
+      console.log("🤖 Step 3: Sending orchestrator welcome message...");
       await ctx.runAction(api.orchestrator.sendOnboardingCompleteWelcomeMessage, {
         sessionId,
         userId,
       });
 
+      console.log("🎉 handleContinueOnboarding completed successfully");
+
       return {
         success: true,
         sessionId, // Return the same session ID
-        message: "Onboarding completed successfully. Orchestrator session created.",
+        message: "Onboarding completed successfully. Identity guidelines populated and orchestrator session created.",
       };
     } catch (error) {
-      console.error("Error handling continue onboarding:", error);
+      console.error("❌ Error handling continue onboarding:", error);
       return {
         success: false,
         error: "Failed to complete onboarding transition",
