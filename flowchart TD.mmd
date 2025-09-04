@@ -1,0 +1,96 @@
+flowchart TD
+    %% User Interactions
+    User[👤 User] --> Dashboard[📊 Dashboard Interface]
+    
+    %% Main System Components
+    Dashboard --> AgentRegistry[🏢 Agent Registry]
+    AgentRegistry --> AgentStore[💾 Agent Store<br/>Zustand State]
+    
+    %% Available Agents
+    subgraph Agents [🤖 Available Agents]
+        direction TB
+        FileAgent[📁 File Creator Agent<br/>Creates files and content]
+        ProjectAgent[📋 Project Creator Agent<br/>Creates and manages projects]
+        InstructionsAgent[📖 Instructions Agent<br/>Processes instructions]
+        SchedulingAgent[⏰ Scheduling Agent<br/>Handles scheduling tasks]
+        TwitterAgent[🐦 Twitter Agent<br/>Social media automation]
+        PreviewAgent[👁️ Preview Agent<br/>Brand identity preview]
+    end
+    
+    %% Agent Registry manages all agents
+    AgentRegistry -.-> Agents
+    
+    %% Data Flow
+    subgraph DataLayer [💾 Data Layer - Convex Backend]
+        direction TB
+        ConvexDB[(🗄️ Convex Database)]
+        Projects[📋 Projects Table]
+        Files[📄 Files Table]
+        Users[👥 Users Table]
+        Guidelines[📚 Identity Guidelines Table]
+        
+        ConvexDB --> Projects
+        ConvexDB --> Files
+        ConvexDB --> Users
+        ConvexDB --> Guidelines
+    end
+    
+    %% Agent Execution Flow
+    User --> |1. User Action| AgentRegistry
+    AgentRegistry --> |2. Route to Agent| FileAgent
+    AgentRegistry --> |2. Route to Agent| ProjectAgent
+    AgentRegistry --> |2. Route to Agent| PreviewAgent
+    AgentRegistry --> |2. Route to Agent| InstructionsAgent
+    AgentRegistry --> |2. Route to Agent| SchedulingAgent
+    AgentRegistry --> |2. Route to Agent| TwitterAgent
+    
+    %% Agents interact with data
+    FileAgent --> |3. Create/Update| DataLayer
+    ProjectAgent --> |3. Create/Update| DataLayer
+    PreviewAgent --> |3. Read Guidelines| DataLayer
+    InstructionsAgent --> |3. Process| DataLayer
+    SchedulingAgent --> |3. Schedule| DataLayer
+    TwitterAgent --> |3. Post Content| DataLayer
+    
+    %% Results back to user
+    DataLayer --> |4. Updated Data| Dashboard
+    Dashboard --> |5. UI Update| User
+    
+    %% Preview Specific Flow
+    subgraph PreviewFlow [👁️ Preview Agent Workflow]
+        direction LR
+        PreviewBtn[🔘 Preview Button] --> PreviewToggle[🔄 Toggle Preview Mode]
+        PreviewToggle --> LoadGuidelines[📚 Load Identity Guidelines]
+        LoadGuidelines --> GeneratePreview[📄 Generate Brand Preview]
+        GeneratePreview --> DisplayPreview[👁️ Display Preview Document]
+    end
+    
+    %% Connect preview flow
+    User --> PreviewBtn
+    PreviewAgent --> PreviewFlow
+    PreviewFlow --> Guidelines
+    
+    %% State Management
+    subgraph StateManagement [⚡ State Management - Zustand]
+        direction TB
+        UIStore[🎨 UI Store<br/>Interface state]
+        EditorStore[✏️ Editor Store<br/>Editor state]
+        SidebarStore[📱 Sidebar Store<br/>Sidebar state]
+        IdentityStore[📝 Identity Guidelines Store<br/>Preview mode, sections]
+    end
+    
+    Dashboard --> StateManagement
+    StateManagement --> Dashboard
+    
+    %% Styling
+    classDef userNode fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef agentNode fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef dataNode fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef stateNode fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef previewNode fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    
+    class User,Dashboard userNode
+    class AgentRegistry,FileAgent,ProjectAgent,PreviewAgent,InstructionsAgent,SchedulingAgent,TwitterAgent agentNode
+    class ConvexDB,Projects,Files,Users,Guidelines dataNode
+    class UIStore,EditorStore,SidebarStore,IdentityStore stateNode
+    class PreviewBtn,PreviewToggle,LoadGuidelines,GeneratePreview,DisplayPreview previewNode

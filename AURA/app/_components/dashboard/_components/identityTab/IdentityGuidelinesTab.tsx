@@ -3,8 +3,9 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useIdentityGuidelines } from '@/lib/hooks';
+import { useIdentityGuidelinesStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -39,6 +40,8 @@ import {
   LegalResourcesSection
 } from './sections/index';
 
+import { BrandPreviewPanel } from './BrandPreviewPanel';
+
 interface IdentityGuidelinesTabProps {
   isReadOnly?: boolean;
 }
@@ -55,9 +58,17 @@ export function IdentityGuidelinesTab({ isReadOnly = false }: IdentityGuidelines
     isComplete
   } = useIdentityGuidelines();
 
-  const [activeSection, setActiveSection] = useState('brand-overview');
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  // Use store for state management
+  const {
+    viewMode,
+    activeSection,
+    isSaving,
+    lastSaved,
+    setActiveSection,
+    togglePreview,
+    setIsSaving,
+    setLastSaved
+  } = useIdentityGuidelinesStore();
   
   // Function to trigger save for the current section
   const handleHeaderSave = () => {
@@ -67,6 +78,11 @@ export function IdentityGuidelinesTab({ isReadOnly = false }: IdentityGuidelines
       detail: { section: activeSection }
     });
     window.dispatchEvent(saveEvent);
+  };
+
+  // Function to toggle preview mode
+  const handlePreviewToggle = () => {
+    togglePreview();
   };
 
   // Initialize guidelines if they don't exist
@@ -246,8 +262,11 @@ export function IdentityGuidelinesTab({ isReadOnly = false }: IdentityGuidelines
             <div className="flex items-center gap-3">
               {/* Preview Button */}
               <button
-                className="h-7 w-7 bg-[#252526] border border-[#454545] rounded text-[#858585] hover:text-[#cccccc] hover:border-[#007acc] transition-colors flex items-center justify-center"
-                title="Preview"
+                onClick={handlePreviewToggle}
+                className={`h-7 w-7 bg-[#252526] border rounded text-[#858585] hover:text-[#cccccc] hover:border-[#007acc] transition-colors flex items-center justify-center ${
+                  viewMode === 'preview' ? 'border-[#007acc] text-[#cccccc]' : 'border-[#454545]'
+                }`}
+                title="Preview Brand Document"
               >
                 <Eye className="w-4 h-4" />
               </button>
@@ -312,7 +331,7 @@ export function IdentityGuidelinesTab({ isReadOnly = false }: IdentityGuidelines
                 return (
                   <div key={item.id} className="rounded bg-[#1e1e1e] border border-[#2d2d2d]">
                     <button
-                      onClick={() => setActiveSection(item.id)}
+                      onClick={() => setActiveSection(item.id as 'brand-overview')}
                       className={`w-full flex items-center gap-2 p-2 hover:bg-[#2d2d2d]/30 transition-colors ${
                         isActive ? 'bg-[#2d2d2d]/50' : ''
                       }`}
@@ -403,7 +422,7 @@ export function IdentityGuidelinesTab({ isReadOnly = false }: IdentityGuidelines
           <div className="flex-1 overflow-hidden">
             <ScrollArea className="h-full">
               <div className="p-6">
-                {renderSection()}
+                {viewMode === 'edit' ? renderSection() : <BrandPreviewPanel />}
               </div>
             </ScrollArea>
           </div>
